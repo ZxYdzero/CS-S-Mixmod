@@ -1,2 +1,7 @@
-# CS-S-Mixmod
-5on5 plugin for CS:S Server
+# CS:Source 满十插件 Mixmod 
+
+## 有以下功能
+> * 十人准备换图
+> * 准备HUD
+> * 自动录制Demo
+> * 半场自动换边后自动启动
