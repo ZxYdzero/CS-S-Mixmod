@@ -1,5 +1,10 @@
 /* Mixmod Created by iDragon *
 Updates:
+- 1-26-24 (bu Sparkle)
+	* 添加满十个人之后没准备直接踢出
+	* 添加更换地图之后的提示
+	* 零星的优化
+
 - 1-13-24 (by Sparkle)
 	* 添加十个人之后投票换图的逻辑 （感谢pug插件）
 
@@ -390,7 +395,8 @@ bool g_HasVoteMap = false;
 new String:MapNames[MAX_MAPS][32];
 new String:MatchMap[32] = ""; // Map name.
 bool g_TenVoted = false;
-
+// 十人的时候的计数器
+int Second = 30;
 public Plugin:myinfo =
 {
 	name = "Mix-Plugin",
@@ -843,6 +849,27 @@ public Action:InformPlayerAboutTheMix(Handle:timer, any:client)
 		PrintToChat(client, "\x04[%s]:x\03 比赛开始！ \x01请勿刷道具 \x01玩得开心，过得愉快", MODNAME);
 		PrintToChat(client, "\x04[%s]:x\03 比赛开始！ \x01请勿随便换队", MODNAME);
 	}
+}
+public OnClientConnected(client) {
+	if (GetClientCount(true) == 10)
+	{
+		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
+	}
+}
+
+public Action Timer_AutoKick(Handle timer) {
+	if (g_ReadyCount < 10 && GetClientCount(true) >= 10) {
+		PrintHintTextToAll("请及时准备：%d / 10\n将会在%d秒后踢出未准备玩家", g_ReadyCount, Second);
+	} else {
+		return Plugin_Stop;
+	}
+	if (Second == 0) {
+		KickUnready();
+		Second = 30;
+		return Plugin_Stop;
+	}
+	Second--;
+	return Plugin_Continue;
 }
 
 public Action:Command_GagPlayer(client, args) {
@@ -4471,7 +4498,10 @@ public Action:Command_JoinTeam(client, args)
 {
 	new String:team[8];
 	GetCmdArg(1, team, sizeof(team));
-	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0) && (GetClientTeam(client) != CS_TEAM_SPECTATOR)) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
+	if (GetClientTeam(client) == CS_TEAM_SPECTATOR) {
+		return Plugin_Continue;
+	}
+	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0)) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
 	{
 		PrintToChat(client, "\x04[%s]:\x03 你此时无法更改队伍！", MODNAME);
 		return Plugin_Handled;
@@ -4537,7 +4567,7 @@ public Action:Command_Ready(client, args)
 			g_ReadyPlayers[client] = true;
 			g_ReadyCount++;
 			UpdateReadyPanel();
-			PrintToChatAll("\x04当前有 \x03 %d \x04 名玩家准备", g_ReadyCount);
+			PrintToChatAll("\x04[%s]:\x03 当前有\x04%d\x03名玩家准备", MODNAME, g_ReadyCount);
 
 			if (g_ReadyCount == 10)
 			{
@@ -4831,7 +4861,7 @@ public Action:Command_UnReady(client, args)
 			g_ReadyPlayers[client] = false;
 		}
 		
-		PrintToChatAll("\x04[%s]:\x03 你尚未准备！", MODNAME);
+		PrintToChat(client, "\x04[%s]:\x03 你取消了准备！", MODNAME);
 
 		return Plugin_Handled;
 	}
@@ -4902,7 +4932,7 @@ Action UpdateReadyPanel()
 	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelText(readyStatus, "可用指令：\n!r或!ready进行准备\n!unready取消准备\n十个人准备后可以换图");
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "========< >========");
+
 	DrawPanelText(readyStatus, "已经准备: ");
 	Format(Ready, sizeof(Ready), "");
 
@@ -4953,9 +4983,11 @@ Action UpdateReadyPanel()
 	}
 	DrawPanelText(readyStatus, Spec);
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "========< >========");
-	DrawPanelText(readyStatus, "By Sparkle 喵~\n有问题请加群668923398\n谢谢喵~");
 
+	DrawPanelText(readyStatus, "By Sparkle 喵~\n有问题请加群668923398\n谢谢喵~");
+	if (g_HasVoteMap == true && g_TenVoted == true && didLiveStarted == false && hasMixStarted == false) {
+		PrintCenterTextAll("地图已经确认，请准备");
+	}
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientConnected(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
@@ -5160,3 +5192,16 @@ LoadMapsDir()
     }
     CloseHandle(dir);
 }
+
+void KickUnready() {
+	for (new i = 1; i <= MaxClients; i++)
+	{
+		if (!g_ReadyPlayers[i] && IsClientInGame(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
+		{
+			if (GetClientTeam(i) != CS_TEAM_SPECTATOR) {
+				KickClientEx(i, "Soyorin：为什么不输入!r准备！");	
+			}
+		}
+	}
+}
+
