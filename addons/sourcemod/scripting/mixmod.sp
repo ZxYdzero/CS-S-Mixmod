@@ -1035,16 +1035,7 @@ public OnMapEnd()
 	g_IsRecording = false;
 	g_IsRecordManual = false;
 
-	if (g_HasVoteMap == true && g_TenVoted == true) {
-		g_AllowReady = true;
-		g_ReadyCount = 0;
-		g_HasVoteMap = false;
-		for (new i=0; i<MaxClients; i++)
-		{
-			g_ReadyPlayers[i] = false;
-			g_ReadyPlayersData[i] = -1;
-		}
-	}
+
 }
 
 public OnMapStart()
@@ -1058,7 +1049,17 @@ public OnMapStart()
 	
 
 	PrecacheSound("ambient/misc/brass_bell_C.wav", true);
-		
+	// 把重置放在这里了
+	if (g_HasVoteMap == true && g_TenVoted == true) {
+		g_AllowReady = true;
+		g_ReadyCount = 0;
+		g_HasVoteMap = false;
+		for (new i=0; i<MaxClients; i++)
+		{
+			g_ReadyPlayers[i] = false;
+			g_ReadyPlayersData[i] = -1;
+		}
+	}	
 	// Reset the gagged/muted players:
 	for (new i=0; i<=MaxClients; i++)
 	{
@@ -4855,7 +4856,6 @@ public Action:Command_UnReady(client, args)
 		
 		if (g_ReadyPlayers[client]) // He is ready ...
 		{
-			UpdateReadyPanel();
 			g_ReadyCount--;
 			g_ReadyPlayers[client] = false;
 		}
