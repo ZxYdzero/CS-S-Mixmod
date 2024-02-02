@@ -851,7 +851,7 @@ public Action:InformPlayerAboutTheMix(Handle:timer, any:client)
 	}
 }
 public OnClientConnected(client) {
-	if (GetClientCount(true) == 10)
+	if ((GetClientCount(true) >= 10) && (hasMixStarted == 0))
 	{
 		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
 	}
@@ -4566,7 +4566,6 @@ public Action:Command_Ready(client, args)
 		{
 			g_ReadyPlayers[client] = true;
 			g_ReadyCount++;
-			UpdateReadyPanel();
 			PrintToChatAll("\x04[%s]:\x03 当前有\x04%d\x03名玩家准备", MODNAME, g_ReadyCount);
 
 			if (g_ReadyCount == 10)
@@ -4984,10 +4983,6 @@ Action UpdateReadyPanel()
 	DrawPanelText(readyStatus, Spec);
 	DrawPanelText(readyStatus, "\n \n");
 
-	DrawPanelText(readyStatus, "By Sparkle 喵~\n有问题请加群668923398\n谢谢喵~");
-	if (g_HasVoteMap == true && g_TenVoted == true && didLiveStarted == false && hasMixStarted == false) {
-		PrintCenterTextAll("地图已经确认，请准备");
-	}
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientConnected(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
@@ -5198,10 +5193,7 @@ void KickUnready() {
 	{
 		if (!g_ReadyPlayers[i] && IsClientInGame(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
 		{
-			if (GetClientTeam(i) != CS_TEAM_SPECTATOR) {
 				KickClientEx(i, "Soyorin：为什么不输入!r准备！");	
-			}
 		}
 	}
 }
-
