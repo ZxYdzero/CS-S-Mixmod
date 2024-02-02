@@ -4499,10 +4499,8 @@ public Action:Command_JoinTeam(client, args)
 {
 	new String:team[8];
 	GetCmdArg(1, team, sizeof(team));
-	if (GetClientTeam(client) == CS_TEAM_SPECTATOR) {
-		return Plugin_Continue;
-	}
-	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0)) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
+	
+	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0) && (GetClientTeam(client) != CS_TEAM_SPECTATOR)) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
 	{
 		PrintToChat(client, "\x04[%s]:\x03 你此时无法更改队伍！", MODNAME);
 		return Plugin_Handled;
