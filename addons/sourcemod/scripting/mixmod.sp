@@ -1,5 +1,9 @@
 /* Mixmod Created by iDragon *
 Updates:
+- 2-4-24 (bu Sparkle)
+	* 出现莫名其妙准备人数与实际不符 已添加修正debug并寻找原因中.....
+	* 减少文本数量 降低usermessage
+	
 - 1-26-24 (bu Sparkle)
 	* 添加满十个人之后没准备直接踢出
 	* 添加更换地图之后的提示
@@ -851,7 +855,7 @@ public Action:InformPlayerAboutTheMix(Handle:timer, any:client)
 	}
 }
 public OnClientConnected(client) {
-	if ((GetClientCount(true) >= 10) && (hasMixStarted == 0))
+	if ((GetClientCount(true) >= 10) && (hasMixStarted == false))
 	{
 		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
 	}
@@ -4565,6 +4569,22 @@ public Action:Command_Ready(client, args)
 		{
 			g_ReadyPlayers[client] = true;
 			g_ReadyCount++;
+			// 不知道为什么有时候会少算一个人 所以在此检测
+			int RealReadyCount = 0;
+			for (new i = 1; i <= MaxClients; i++)
+			{
+				if (g_ReadyPlayers[i])
+				{
+					RealReadyCount++;
+				}
+			}
+			if (g_ReadyCount != RealReadyCount)
+			{
+				PrintToChatAll("\x04[%s]:\x03 Debug: 检测到玩家实际准备数量不符，已修正。", MODNAME);
+				PrintToServer("\x04[%s]:\x03 Debug: 检测到玩家实际准备数量不符，已修正。", MODNAME);
+				g_ReadyCount = RealReadyCount;
+			}
+			RealReadyCount = 0;
 			PrintToChatAll("\x04[%s]:\x03 当前有\x04%d\x03名玩家准备", MODNAME, g_ReadyCount);
 
 			if (g_ReadyCount == 10)
