@@ -3,7 +3,7 @@ Updates:
 - 2-4-24 (bu Sparkle)
 	* 出现莫名其妙准备人数与实际不符 已添加修正debug并寻找原因中.....
 	* 减少文本数量 降低usermessage
-	
+
 - 1-26-24 (bu Sparkle)
 	* 添加满十个人之后没准备直接踢出
 	* 添加更换地图之后的提示
@@ -401,6 +401,7 @@ new String:MatchMap[32] = ""; // Map name.
 bool g_TenVoted = false;
 // 十人的时候的计数器
 int Second = 30;
+bool isKicked = false;
 public Plugin:myinfo =
 {
 	name = "Mix-Plugin",
@@ -855,9 +856,10 @@ public Action:InformPlayerAboutTheMix(Handle:timer, any:client)
 	}
 }
 public OnClientConnected(client) {
-	if ((GetClientCount(true) >= 10) && (hasMixStarted == false))
+	if ((GetClientCount(true) >= 10) && (hasMixStarted == false) && isKicked == false)
 	{
 		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
+		isKicked = true;
 	}
 }
 
@@ -872,8 +874,10 @@ public Action Timer_AutoKick(Handle timer) {
 		Second = 30;
 		return Plugin_Stop;
 	}
+	isKicked = true;
 	Second--;
 	return Plugin_Continue;
+
 }
 
 public Action:Command_GagPlayer(client, args) {
@@ -5211,7 +5215,8 @@ void KickUnready() {
 	{
 		if (!g_ReadyPlayers[i] && IsClientInGame(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
 		{
-				KickClientEx(i, "Soyorin：为什么不输入!r准备！");	
+				KickClientEx(i, "Soyorin：为什么不输入!r准备！");
 		}
 	}
+	isKicked = false;
 }
