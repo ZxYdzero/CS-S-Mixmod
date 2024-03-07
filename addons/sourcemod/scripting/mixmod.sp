@@ -1,5 +1,8 @@
 /* Mixmod Created by iDragon *
 Updates:
+- 3-7-24 (bu Sparkle)
+	* 修复了满十未开始时候在每回合结束时不会CloseTimer导致用户网络堆栈溢出被服务器T出
+
 - 2-4-24 (bu Sparkle)
 	* 出现莫名其妙准备人数与实际不符 已添加修正debug并寻找原因中.....
 	* 减少文本数量 降低usermessage
@@ -15,7 +18,6 @@ Updates:
 - 1-6-24 (by Sparkle)
 	* 更换准备hud
 	* 去除swaptimer中某一个 if 的 g_IsItManual，强制半场自动live开始
-	* 尝试自动为半场换队队员分配人物模型(失败了)
 
 - 8-8-23 (by Sparkle)
 	* 修复了内存泄漏的情况
@@ -402,6 +404,9 @@ bool g_TenVoted = false;
 // 十人的时候的计数器
 int Second = 30;
 bool isKicked = false;
+// 一些新的东西
+new Handle:HudTimer = INVALID_HANDLE;
+
 public Plugin:myinfo =
 {
 	name = "Mix-Plugin",
@@ -430,7 +435,7 @@ public OnPluginStart()
 	g_CvarStopCustomCfg = CreateConVar("sm_mixmod_custom_stop_cfg", "0", "Use stop.cfg instead of prac or warmup cfg when sm_stop command is performed? 0 - No, 1 - Yes");
 	g_CvarShowSwitchInPanel = CreateConVar("sm_mixmod_show_swap_in_panel", "1", "In the last round of the current half, tell the players not to switch their teams in? 0 - Chat, 1 - Panel(menu)");
 	g_CvarShowCashInPanel = CreateConVar("sm_mixmod_show_cash_in_panel", "0", "When round starts, show players money in? 0 - Chat, 1 - Panel(menu)");
-	g_CvarHalfAutoLiveStart = CreateConVar("sm_mixmod_half_auto_live", "0", "When new half begins, automatically start live? 0 - No, 1 - Yes");
+	g_CvarHalfAutoLiveStart = CreateConVar("sm_mixmod_half_auto_live", "1", "When new half begins, automatically start live? 0 - No, 1 - Yes");
 	g_CvarCustomLiveCfg = CreateConVar("sm_mixmod_custom_live_cfg", "mr3.cfg", "Custom name of the mr3 (live or match) config: (If the name doesn't exist, the plugin will try to execute match/live/mr15/esl5on5 cfg)");
 	g_CvarCustomPracCfg = CreateConVar("sm_mixmod_custom_prac_cfg", "prac.cfg", "Custom name of the prac (warmup) config: (If the name doesn't exist, the plugin will try to execute prac / warmup config)");
 	g_CvarCustomMr3Cfg = CreateConVar("sm_mixmod_custom_mr3_cfg", "mr3.cfg", "Custome name of the mr3 config: (If the name doesn't exist, the plugin will try to execute mr3.cfg)");
@@ -445,7 +450,7 @@ public OnPluginStart()
 	g_CvarAutoMixEnabled = CreateConVar("sm_mixmod_auto_warmod_enable", "0", "Enable Auto-Warmod and ready system? 0 - No, 1 - Yes.");
 	g_CvarAutoMixRandomize = CreateConVar("sm_mixmod_auto_warmod_random", "1", "After 10 players are ready, random the team players and start? 0 - No, 1 - Yes.");
 	g_CvarAutoMixBan = CreateConVar("sm_mixmod_auto_warmod_ban", "-1", "In minutes: how long to ban players who has left the server? <Negetive number> - Don't ban, <Positive Number> - Time, 0 - Permanent ban");
-	g_CvarEnableAutoSourceTVRecord = CreateConVar("sm_mixmod_autorecord_enable", "0", "Auto record the game when match is live? 0 - No, 1 - Yes.");
+	g_CvarEnableAutoSourceTVRecord = CreateConVar("sm_mixmod_autorecord_enable", "1", "Auto record the game when match is live? 0 - No, 1 - Yes.");
 	g_CvarAutoSourceTVRecordSaveDir = CreateConVar("sm_mixmod_autorecord_save_dir", "mix_records", "Save directatory for the auto-records (if folder doesn't exist, the record will be saved at: cstrike/ )");
 	g_CvarKnifeWinTeamVote = CreateConVar("sm_mixmod_knife_round_win_vote", "0", "Let the wining team in the knife round decide in which team they want to be? 0 - No, 1 - Yes.");
 	g_CvarEnablePasswords = CreateConVar("sm_mixmod_password_commands_enable", "1", "Enable password commands (sm_pw or sm_npw or sm_rpw)? 0 - No, 1 - Yes.");
@@ -465,7 +470,7 @@ public OnPluginStart()
 	
 	// Auto-Generate this plugin config.
 	AutoExecConfig(true, "sm_mixmod");
-	
+
 	// Hook Version changed...
 	HookConVarChange(g_hPluginVersion, VersionHasBeenChanged);
 	
@@ -1945,6 +1950,9 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (GetConVarInt(g_CvarEnabled) == 1)
 	{
+		if (didLiveStarted == false && hasMixStarted == false && HudTimer != INVALID_HANDLE) {
+			KillTimer(HudTimer, false);
+		}
 		if (isPauseBeingUsed)
 		{
 			SetTeamScore(3, g_nCTScoreH1);
@@ -4945,16 +4953,14 @@ public Action:Command_ShowMvp(client, args)
 Action UpdateReadyPanel()
 {
 	readyStatus = CreatePanel();
-	decl String:title[128], String:notReady[400], String:name[32], String:Ready[400],String:Spec[400];
+	decl String:title[64], String:notReady[160], String:name[16], String:Ready[160],String:Spec[160];
 	Format(title, sizeof(title), "BanG Dream! It’s MyGO!!!!!");
 	SetPanelTitle(readyStatus, title);
-	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelText(readyStatus, "=====<- 准备系统 ->=====");
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "可用指令：\n!r或!ready进行准备\n!unready取消准备\n十个人准备后可以换图");
+	DrawPanelText(readyStatus, "可用指令:\n!r或!ready 准备\n!unready 取消准备\n提示:\n十个人准备后可投票换图\n无rtv nominate");
 	DrawPanelText(readyStatus, "\n \n");
-
-	DrawPanelText(readyStatus, "已经准备: ");
+	DrawPanelItem(readyStatus, "已准备:");
 	Format(Ready, sizeof(Ready), "");
 
 	for (new i = 1; i <= MaxClients; i++)
@@ -4971,7 +4977,7 @@ Action UpdateReadyPanel()
 	}
 	DrawPanelText(readyStatus, Ready);
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "尚未准备: ");
+	DrawPanelItem(readyStatus, "未准备:");
 	Format(notReady, sizeof(notReady), "");
 
 	for (new i = 1; i <= MaxClients; i++)
@@ -4988,7 +4994,7 @@ Action UpdateReadyPanel()
 
 	DrawPanelText(readyStatus, notReady);
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "观察者: ");
+	DrawPanelItem(readyStatus, "观察者:");
 	Format(Spec, sizeof(Spec), "");
 
 	for (new i = 1; i <= MaxClients; i++)
@@ -5072,7 +5078,7 @@ void HudUpdate()
 {
 	if (didLiveStarted == false && hasMixStarted == false) {
 
-		CreateTimer(1.0, MenuRefresh_Timer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+		HudTimer = CreateTimer(1.0, MenuRefresh_Timer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 
 	}
 }
