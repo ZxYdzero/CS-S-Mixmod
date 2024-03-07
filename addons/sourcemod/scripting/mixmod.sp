@@ -2,6 +2,7 @@
 Updates:
 - 3-7-24 (bu Sparkle)
 	* 修复了满十未开始时候在每回合结束时不会CloseTimer导致用户网络堆栈溢出被服务器T出
+	* 现在换边不需要选择模型了
 
 - 2-4-24 (bu Sparkle)
 	* 出现莫名其妙准备人数与实际不符 已添加修正debug并寻找原因中.....
@@ -5057,14 +5058,29 @@ public Action:SwapTimer(Handle:timer)
 		{
 			team = GetClientTeam(client);
 			
-			if (team == 3) {
-				ChangeClientTeam(client, 2);
-				set_random_model(client, 2);
-			}
+			// if (team == 3) {
+			// 	ChangeClientTeam(client, 2);
+			// 	set_random_model(client, 2);
+			// }
+			// else if (team == 2) {
+			// 	ChangeClientTeam(client, 3);
+			// 	set_random_model(client, 3);
+			// }
+			if(team == CS_TEAM_CT)
+			{
 
-			else if (team == 2) {
-				ChangeClientTeam(client, 3);
-				set_random_model(client, 3);
+				CS_SwitchTeam(client, CS_TEAM_T);
+				if(IsPlayerAlive(client))
+				{
+					SetEntityModel(client, tmodels[GetRandomInt(0,3)]);
+				}
+			} else if(team == CS_TEAM_T) {
+
+				CS_SwitchTeam(client, CS_TEAM_CT);
+				if(IsPlayerAlive(client))
+				{
+					SetEntityModel(client, ctmodels[GetRandomInt(0,3)]);
+				}
 			}
 
 		}
