@@ -1,14 +1,19 @@
 /* Mixmod Created by iDragon *
 Updates:
-- 3-7-24 (bu Sparkle)
+- 3-17-24 (by Sparkle)
+	* 现在可以补位了
+	* 修复了第一次满10个人并且进入准备倒计时后 再次满10个人不会触发准备倒计时的bug
+	* 平衡队伍在特定情况造成插件堆栈爆炸
+
+- 3-7-24 (by Sparkle)
 	* 修复了满十未开始时候在每回合结束时不会CloseTimer导致用户网络堆栈溢出被服务器T出
 	* 现在换边不需要选择模型了
 
-- 2-4-24 (bu Sparkle)
+- 2-4-24 (by Sparkle)
 	* 出现莫名其妙准备人数与实际不符 已添加修正debug并寻找原因中.....
 	* 减少文本数量 降低usermessage
 
-- 1-26-24 (bu Sparkle)
+- 1-26-24 (by Sparkle)
 	* 添加满十个人之后没准备直接踢出
 	* 添加更换地图之后的提示
 	* 零星的优化
@@ -210,7 +215,7 @@ Updates:
 	
 	
 */
-
+#pragma dynamic 131072
 #pragma semicolon 1
 #include <sourcemod>
 #include <sdktools>
@@ -546,6 +551,10 @@ public OnPluginStart()
 		Command_Live,
 		ACCESS_FLAG,
 		"Starts the game (live ...).");
+	RegAdminCmd("sm_votemap",
+		Command_VoteMap,
+		ACCESS_FLAG,
+		"Start Maps Vote.");
 		
 	RegAdminCmd("sm_notlive",
 		Command_NotLive,
@@ -867,12 +876,15 @@ public OnClientConnected(client) {
 		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
 		isKicked = true;
 	}
+
 }
 
 public Action Timer_AutoKick(Handle timer) {
 	if (g_ReadyCount < 10 && GetClientCount(true) >= 10) {
 		PrintHintTextToAll("请及时准备：%d / 10\n将会在%d秒后踢出未准备玩家", g_ReadyCount, Second);
 	} else {
+		isKicked = false;
+		Second = 30;
 		return Plugin_Stop;
 	}
 	if (Second == 0) {
@@ -1951,7 +1963,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (GetConVarInt(g_CvarEnabled) == 1)
 	{
-		if (didLiveStarted == false && hasMixStarted == false && HudTimer != INVALID_HANDLE) {
+		if (didLiveStarted == false && hasMixStarted == false && HudTimer != INVALID_HANDLE && g_HasVoteMap == false) {
 			KillTimer(HudTimer, false);
 		}
 		if (isPauseBeingUsed)
@@ -2919,7 +2931,18 @@ stock GetRandomClientFromSpec()
 	
 	return clients_in_spec[GetRandomInt(0, count)];
 }
-
+public Action:Command_VoteMap(client, args) {
+	if (GetConVarInt(g_CvarEnabled) == 1)
+	{
+		if (didLiveStarted)
+		{
+			PrintToChat(client, "\x04[%s]:\x03 Live is already running!", MODNAME);
+			return Plugin_Handled;
+		} else {
+			VoteMaps();
+		}
+	}
+}
 public Action:Command_Pause(client, args)
 {
 	if (GetConVarInt(g_CvarEnabled) == 1)
@@ -4516,10 +4539,11 @@ public Action:Command_JoinTeam(client, args)
 {
 	new String:team[8];
 	GetCmdArg(1, team, sizeof(team));
-	
-	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0) && (GetClientTeam(client) != CS_TEAM_SPECTATOR)) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
+
+	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0) && ((GetTeamClientCount(CS_TEAM_CT) + GetTeamClientCount(CS_TEAM_T) == 10))) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
 	{
 		PrintToChat(client, "\x04[%s]:\x03 你此时无法更改队伍！", MODNAME);
+		CS_SwitchTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
 	}
 	return Plugin_Continue;
@@ -4957,6 +4981,7 @@ Action UpdateReadyPanel()
 	decl String:title[64], String:notReady[160], String:name[16], String:Ready[160],String:Spec[160];
 	Format(title, sizeof(title), "BanG Dream! It’s MyGO!!!!!");
 	SetPanelTitle(readyStatus, title);
+	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelText(readyStatus, "=====<- 准备系统 ->=====");
 	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelText(readyStatus, "可用指令:\n!r或!ready 准备\n!unready 取消准备\n提示:\n十个人准备后可投票换图\n无rtv nominate");
