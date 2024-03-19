@@ -1,7 +1,6 @@
 # CS:Source 满十插件 Mixmod 
 
 > * 修改自 [iDragon的Mixmod插件](https://forums.alliedmods.net/showthread.php?p=1512637)
-> * 仅使用mr3.cfg 30回合16胜
 
 ## 有以下功能
 > * 十人准备换图
