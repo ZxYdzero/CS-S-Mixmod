@@ -442,7 +442,7 @@ public OnPluginStart()
 	g_CvarShowSwitchInPanel = CreateConVar("sm_mixmod_show_swap_in_panel", "1", "In the last round of the current half, tell the players not to switch their teams in? 0 - Chat, 1 - Panel(menu)");
 	g_CvarShowCashInPanel = CreateConVar("sm_mixmod_show_cash_in_panel", "0", "When round starts, show players money in? 0 - Chat, 1 - Panel(menu)");
 	g_CvarHalfAutoLiveStart = CreateConVar("sm_mixmod_half_auto_live", "1", "When new half begins, automatically start live? 0 - No, 1 - Yes");
-	g_CvarCustomLiveCfg = CreateConVar("sm_mixmod_custom_live_cfg", "mr3.cfg", "Custom name of the mr3 (live or match) config: (If the name doesn't exist, the plugin will try to execute match/live/mr15/esl5on5 cfg)");
+	g_CvarCustomLiveCfg = CreateConVar("sm_mixmod_custom_live_cfg", "mr15.cfg", "Custom name of the mr15 (live or match) config: (If the name doesn't exist, the plugin will try to execute match/live/mr15/esl5on5 cfg)");
 	g_CvarCustomPracCfg = CreateConVar("sm_mixmod_custom_prac_cfg", "prac.cfg", "Custom name of the prac (warmup) config: (If the name doesn't exist, the plugin will try to execute prac / warmup config)");
 	g_CvarCustomMr3Cfg = CreateConVar("sm_mixmod_custom_mr3_cfg", "mr3.cfg", "Custome name of the mr3 config: (If the name doesn't exist, the plugin will try to execute mr3.cfg)");
 	g_CvarKickAdmins = CreateConVar("sm_mixmod_kick_admins", "0", "When admin performs sm_kickct or sm_kickt , kick the admins too? 0 - No, 1 - Yes.");
@@ -551,7 +551,7 @@ public OnPluginStart()
 		Command_Live,
 		ACCESS_FLAG,
 		"Starts the game (live ...).");
-	RegAdminCmd("sm_votemap",
+	RegAdminCmd("sm_votemaps",
 		Command_VoteMap,
 		ACCESS_FLAG,
 		"Start Maps Vote.");
@@ -870,7 +870,7 @@ public Action:InformPlayerAboutTheMix(Handle:timer, any:client)
 		PrintToChat(client, "\x04[%s]:x\03 比赛开始！ \x01请勿随便换队", MODNAME);
 	}
 }
-public OnClientConnected(client) {
+public OnClientPutInServer(client) {
 	if ((GetClientCount(true) >= 10) && (hasMixStarted == false) && isKicked == false)
 	{
 		CreateTimer(1.0, Timer_AutoKick, _, TIMER_REPEAT);
@@ -880,7 +880,7 @@ public OnClientConnected(client) {
 }
 
 public Action Timer_AutoKick(Handle timer) {
-	if (g_ReadyCount < 10 && GetClientCount(true) >= 10) {
+	if (g_ReadyCount < 10 && GetClientCount(true) >= 10 && didLiveStarted == false) {
 		PrintHintTextToAll("请及时准备：%d / 10\n将会在%d秒后踢出未准备玩家", g_ReadyCount, Second);
 	} else {
 		isKicked = false;
@@ -895,7 +895,6 @@ public Action Timer_AutoKick(Handle timer) {
 	isKicked = true;
 	Second--;
 	return Plugin_Continue;
-
 }
 
 public Action:Command_GagPlayer(client, args) {
@@ -1060,13 +1059,15 @@ public OnMapEnd()
 
 	g_IsRecording = false;
 	g_IsRecordManual = false;
-
-
+	// 为了防止换图之后人跑没了 在此给这里增添一个还原
+	if (g_HasVoteMap == false && g_TenVoted == true) {
+		g_HasVoteMap = false;
+		g_TenVoted = false;
+	}
 }
 
 public OnMapStart()
 {
-	
 	if (isBuyZoneDisabled)
 	{
 		if (EnableBuyZone())
@@ -1075,7 +1076,7 @@ public OnMapStart()
 	
 
 	PrecacheSound("ambient/misc/brass_bell_C.wav", true);
-	// 把重置放在这里了
+	// 重置g_HasVoteMap和一部分变量
 	if (g_HasVoteMap == true && g_TenVoted == true) {
 		g_AllowReady = true;
 		g_ReadyCount = 0;
@@ -1583,9 +1584,11 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 					
 				if (g_CurrentRound > (g_nCTScoreH1 + g_nTScoreH1 + 1))
 					g_CurrentRound--;
-					
+
+
+
 				if (GetConVarInt(g_CvarShowScores) == 1)
-					PrintToChatAll("\x04[%s]:\x03 回合\x03 %d \x04- Hal半场进度f\x03 %d\x04 /\x03 4\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_CurrentRound, g_CurrentHalf, teamAName, g_nCTScore, teamBName, g_nTScore);
+					PrintToChatAll("\x04[%s]:\x03 回合\x03 %d \x04- 半场进度\x03 %d\x04 /\x03 4\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_CurrentRound, g_CurrentHalf, teamAName, g_nCTScore, teamBName, g_nTScore);
 
 				if (g_nCTScore == 18)
 					PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamAName);
@@ -1599,7 +1602,9 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 			if ((hasMixStarted) && (didLiveStarted))
 			{	
 				g_CurrentRound++;
-				
+				if (g_CurrentRound != (g_nCTScoreH1 + g_nTScoreH1 + 1)) {
+					g_CurrentRound = g_nCTScoreH1 + g_nTScoreH1 + 1;
+				}
 				if ((g_CurrentHalf == 1) && (g_CurrentRound == 16))
 				{
 					g_SwapNow = true;
@@ -2934,9 +2939,9 @@ stock GetRandomClientFromSpec()
 public Action:Command_VoteMap(client, args) {
 	if (GetConVarInt(g_CvarEnabled) == 1)
 	{
-		if (didLiveStarted)
+		if (didLiveStarted || g_TenVoted == true)
 		{
-			PrintToChat(client, "\x04[%s]:\x03 Live is already running!", MODNAME);
+			PrintToChat(client, "\x04[%s]:\x03 现在不可投票更换地图", MODNAME);
 			return Plugin_Handled;
 		} else {
 			VoteMaps();
@@ -4643,8 +4648,7 @@ public Action:Command_Ready(client, args)
 
 void VoteMaps()
 {
-	if (GetConVarInt(g_CvarEnabled) == 1 && (g_HasVoteMap == false) && (g_TenVoted == false))
-	{
+	if (GetConVarInt(g_CvarEnabled) == 1 && (g_TenVoted == false)) {
 		StartMapVote();
 	} else {
 		StartAutoMix();
@@ -4977,6 +4981,9 @@ public Action:Command_ShowMvp(client, args)
 
 Action UpdateReadyPanel()
 {
+	if (g_TenVoted == true) {
+		PrintCenterTextAll("已换图，请及时输入!r准备");
+	}
 	readyStatus = CreatePanel();
 	decl String:title[64], String:notReady[160], String:name[16], String:Ready[160],String:Spec[160];
 	Format(title, sizeof(title), "BanG Dream! It’s MyGO!!!!!");
