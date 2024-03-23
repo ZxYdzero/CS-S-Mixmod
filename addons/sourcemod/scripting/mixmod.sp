@@ -1026,8 +1026,8 @@ public Action:Command_UnMutePlayer(client, args)
 			SetClientListeningFlags(targets[i], VOICE_NORMAL);
 			
 			GetClientName(targets[i], targetName, sizeof(targetName));
-			PrintToChat(client, "\x04[%s]:\x03 You have un-muted %s !", MODNAME, targetName);
-			PrintToChat(targets[i], "\x04[%s]:\x03 You have been un-muted!", MODNAME);
+			PrintToChat(client, "\x04[%s]:\x03 你已经取消此玩家的静音 %s !", MODNAME, targetName);
+			PrintToChat(targets[i], "\x04[%s]:\x03 你已经被取消静音!", MODNAME);
 		}
 	}
 	return Plugin_Handled;
@@ -1037,11 +1037,11 @@ public Action:Command_Last(client, args)
 {
 	if (StrContains(g_LastEntered_SteamID, "STEAM") == -1)
 	{
-		PrintToChat(client, "\x04[%s]:\x03 No player has joined since the plugin loaded...", MODNAME);
+		PrintToChat(client, "\x04[%s]:\x03 没有玩家在插件被加载后进入游戏...", MODNAME);
 		return Plugin_Handled;
 	}
 	
-	PrintToChatAll("\x04[%s]:\x03 The last player that joined is:", MODNAME);
+	PrintToChatAll("\x04[%s]:\x03 最后一位进入游戏的玩家为:", MODNAME);
 	PrintToChatAll("\x04[\x03%s\x04] \x03%s .", g_LastEntered_SteamID, g_LastEntered_Name);
 
 	return Plugin_Handled;
@@ -1106,13 +1106,13 @@ public OnMapStart()
 	g_iAccount = FindSendPropInfo("CCSPlayer", "m_iAccount");
 
 	if (g_iAccount == -1)
-		PrintToChatAll("\x04[%s]:\x03 Can't find the m_iAccount offest! - Money wont be shown in the mix!", MODNAME);
+		PrintToChatAll("\x04[%s]:\x03 无法找到 m_iAccount 偏移! - 金钱将不会显示!", MODNAME);
 		
 	g_hRestartGame = FindConVar("mp_restartgame");
 	if (g_hRestartGame == INVALID_HANDLE)
 	{
-		PrintToChatAll("\x04[%s]:\x03 Couldn't find the cvar mp_restartgame !", MODNAME);
-		SetFailState("[%s]: Couldn't find the cvar mp_restartgame !", MODNAME);
+		PrintToChatAll("\x04[%s]:\x03 无法找到命令 mp_restartgame !", MODNAME);
+		SetFailState("[%s]: 无法找到命令 mp_restartgame !", MODNAME);
 	}
 	HookConVarChange(g_hRestartGame, OnGameRestarted);
 	
@@ -1408,9 +1408,9 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 		if (isKo3Running) // Knife is running and its own text will be shown.
 		{
 			if (GetConVarInt(g_CvarHalfAutoLiveStart) == 1)
-				PrintToChatAll("\x04[%s]:\x03 Ko3 is running...", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 刀局已打开...", MODNAME);
 			else if (hasMixStarted)
-				PrintToChatAll("\x04[%s]:\x03 Ko3 is running... type !live to start the match", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 刀局已打开... 输入 !live 开始比赛", MODNAME);
 			for (new i=1; i<=MaxClients; i++)
 			{
 				if (!IsClientInGame(i) || !IsPlayerAlive(i))
@@ -1602,9 +1602,7 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 			if ((hasMixStarted) && (didLiveStarted))
 			{	
 				g_CurrentRound++;
-				if (g_CurrentRound != (g_nCTScoreH1 + g_nTScoreH1 + 1)) {
-					g_CurrentRound = g_nCTScoreH1 + g_nTScoreH1 + 1;
-				}
+
 				if ((g_CurrentHalf == 1) && (g_CurrentRound == 16))
 				{
 					g_SwapNow = true;
@@ -1929,7 +1927,7 @@ public Handle_TeamsVoteMenu(Handle:menu, MenuAction:action, param1, param2)
 		}
 		
 		isKo3Running = false;
-		PrintToChatAll("x04[%s]:\x03 Teams has been decided!");
+		PrintToChatAll("x04[%s]:\x03 队伍已选择!");
 		Command_Mr15(0, 0);
 	}
 }
@@ -1988,9 +1986,9 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				new Handle:switchteams = CreateMenu(Handle_TeamsVoteMenu);
 				new win_team = GetEventInt(event, "winner");
 				if (win_team == TEAM_T)
-					SetMenuTitle(switchteams, "Switch team side (to ct team)?");
+					SetMenuTitle(switchteams, "更改队伍吗 (去防守方队伍)?");
 				else if (win_team == TEAM_CT)
-					SetMenuTitle(switchteams, "Switch team side (to t team)?");
+					SetMenuTitle(switchteams, "更改队伍吗 (去进攻方队伍)?");
 				AddMenuItem(switchteams, "yes", "Yes");
 				AddMenuItem(switchteams, "no", "No");
 				SetMenuExitButton(switchteams, false);
@@ -2005,9 +2003,9 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				}
 				VoteMenu(switchteams, clientsArr, found, 12);
 				if (win_team == 2)
-					PrintToChatAll("\x04[%s]:\x03 Terrorists will choose now their team!", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 进攻方将要选择队伍!", MODNAME);
 				else if (win_team == 3)
-					PrintToChatAll("\x04[%s]:\x03 Counter-Terrorists will choose now their team!", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 防守方将要选择队伍!", MODNAME);
 				// isKo3Running = false; - Will be disabled when the vote has been ended!
 				
 				if (EnableBuyZone())
@@ -2072,11 +2070,11 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				new kills = max;
 				
 				if (kills == 5)
-					PrintToChatAll("\x04[%s]:\x03 Round\x01 %d \x03MVP:\x04 %s , \x03Did an \x04ACE!", MODNAME, g_CurrentRound-1, attackerName, kills);
+					PrintToChatAll("\x04[%s]:\x03 回合\x01 %d \x03MVP:\x04 %s , \x03王牌！\x04消灭了敌方队伍!", MODNAME, g_CurrentRound-1, attackerName);
 				else if (kills == 4)
-					PrintToChatAll("\x04[%s]:\x03 Round\x01 %d \x03MVP:\x04 %s , \x03Did a \x04MINI!", MODNAME, g_CurrentRound-1, attackerName, kills);
+					PrintToChatAll("\x04[%s]:\x03 回合\x01 %d \x03MVP:\x04 %s , \x03四杀 \x04天下无敌!", MODNAME, g_CurrentRound-1, attackerName);
 				else if (kills == 3)
-					PrintToChatAll("\x04[%s]:\x03 Round\x01 %d \x03MVP:\x04 %s , \x03Killed:\x04 %d \x03Enemies!", MODNAME, g_CurrentRound-1, attackerName, kills);
+					PrintToChatAll("\x04[%s]:\x03 回合\x01 %d \x03MVP:\x04 %s , \x03三杀 \x04举世皆惊!", MODNAME, g_CurrentRound-1, attackerName);
 			}
 		}
 		
@@ -2094,7 +2092,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				time = 0.1;
 			CreateTimer(time, SwapTimer);
 
-			PrintToChatAll("\x04[%s]:\x03 Swapping teams...", MODNAME);
+			PrintToChatAll("\x04[%s]:\x03 交换队伍...", MODNAME);
 			
 			g_nTScoreH1 = 0;
 			g_nCTScoreH1 = 0;
@@ -2108,7 +2106,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				EmitSoundToAll("ambient/misc/brass_bell_C.wav");
 			}
 			if (GetConVarInt(g_CvarHalfAutoLiveStart) == 0)
-				PrintToChatAll("\x04[%s]:\x03 Teams swapped. HALF 2! \x01- \x03Type\x04 !live \x03to start.", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 队伍交换：下半场! \x01- \x03输入\x04 !live \x03开始.", MODNAME);
 			else
 			{
 				new executed = 0;
@@ -2133,9 +2131,9 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 						ServerCommand("mp_restartgame 3");
 				}
 				
-				PrintToChatAll("\x04[%s]:\x03 Teams swapped. HALF 2 Will begin in a few seconds!", MODNAME);
-				PrintToChatAll("\x04[%s]:\x03 Teams swapped. HALF 2 Will begin in a few seconds!", MODNAME);
-				PrintToChatAll("\x04[%s]:\x03 Teams swapped. HALF 2 Will begin in a few seconds!", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 队伍交换：下半场将在一会后进行!", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 队伍交换：下半场将在一会后进行!", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 队伍交换：下半场将在一会后进行!", MODNAME);
 			}
 			
 			g_SwapNow = false;
@@ -2213,7 +2211,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				if (time < 0.1)
 					time = 0.1;
 				CreateTimer(time, SwapTimer);
-				PrintToChatAll("\x04[%s]:\x03 Swapping teams...", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 交换队伍...", MODNAME);
 
 				g_nTScoreH1 = 0;
 				g_nCTScoreH1 = 0;
@@ -2228,9 +2226,9 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				}
 				Command_Mr3(0, 0);
 				if (GetConVarInt(g_CvarHalfAutoLiveStart) == 0)
-					PrintToChatAll("\x04[%s]:\x03 Teams swapped. Mr3 settings are loaded! \x01- \x03Type\x04 !live \x03to start.", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 队伍交换. Mr3 settings are loaded! \x01- \x03输入\x04 !live \x03开始.", MODNAME);
 				else
-					PrintToChatAll("\x04[%s]:\x03 Teams swapped. Mr3 settings are loaded!", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 队伍交换：加时赛设置已加载!", MODNAME);
 			}
 		}
 		else if ((hasMixStarted) && (didLiveStarted))
@@ -2262,7 +2260,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 					time = 0.1;
 				CreateTimer(time, SwapTimer);
 
-				PrintToChatAll("\x04[%s]:\x03 Swapping teams...", MODNAME);
+				PrintToChatAll("\x04[%s]:\x03 交换队伍...", MODNAME);
 				
 				g_nTScoreH1 = 0;
 				g_nCTScoreH1 = 0;
@@ -2273,15 +2271,12 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 				
 				if (GetConVarInt(g_CvarPlayTeamSwapedSound) == 1)
 				{
-
-					
-				
 					EmitSoundToAll("ambient/misc/brass_bell_C.wav");
 				}
 				if (GetConVarInt(g_CvarHalfAutoLiveStart) == 0)
-					PrintToChatAll("\x04[%s]:\x03 Teams swapped. LAST HALF! \x01- \x03Type\x04 !live \x03to start.", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 队伍交换：突然死亡! \x01- \x03输入\x04 !live \x03开始.", MODNAME);
 				else
-					PrintToChatAll("\x04[%s]:\x03 Teams swapped. LAST HALF!", MODNAME);
+					PrintToChatAll("\x04[%s]:\x03 队伍交换：突然死亡!", MODNAME);
 				g_SwapNow = false;
 			}
 		
@@ -2968,7 +2963,7 @@ public Action:Command_Pause(client, args)
 		
 		isPauseBeingUsed = true;
 		g_CurrentRound--;
-		PrintToChatAll("\x04[%s]:\x03 This round won't be counted!", MODNAME);
+		PrintToChatAll("\x04[%s]:\x03 这回合将不会被记录!", MODNAME);
 
 		return Plugin_Handled;
 	}
