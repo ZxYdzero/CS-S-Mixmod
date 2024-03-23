@@ -4462,7 +4462,7 @@ public Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadc
 		
 		decl String:reason[30];
 		GetEventString(event, "reason", reason, sizeof(reason));
-		if (StrContains(reason, "Disconnect by user") != -1)
+		if ((StrContains(reason, "Disconnect by user") != -1) && didLiveStarted == true && hasMixStarted == true && (GetClientTeam(client) != CS_TEAM_SPECTATOR))
 		{
 			new banTime = GetConVarInt(g_CvarAutoMixBan);
 			if (banTime >= 0)
