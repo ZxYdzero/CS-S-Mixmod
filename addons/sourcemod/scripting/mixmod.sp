@@ -1079,13 +1079,13 @@ public OnMapStart()
 	// 重置g_HasVoteMap和一部分变量
 	if (g_HasVoteMap == true && g_TenVoted == true) {
 		g_AllowReady = true;
-		g_ReadyCount = 0;
 		g_HasVoteMap = false;
 		for (new i=0; i<MaxClients; i++)
 		{
 			g_ReadyPlayers[i] = false;
 			g_ReadyPlayersData[i] = -1;
 		}
+		g_ReadyCount = 0;
 	}	
 	// Reset the gagged/muted players:
 	for (new i=0; i<=MaxClients; i++)
@@ -1399,10 +1399,7 @@ public Action:DisablePause(Handle:timer, any:team)
 
 public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (didLiveStarted == false && hasMixStarted == false) {
-		HudUpdate();
-	}
-
+	HudUpdate();
 	if (GetConVarInt(g_CvarEnabled) == 1)
 	{
 		if (isKo3Running) // Knife is running and its own text will be shown.
@@ -1516,7 +1513,7 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 				}
 				else
 				{
-					if (g_CurrentRound > (g_nCTScoreH1 + g_nCTScoreH1 + 1))
+					if (g_CurrentRound > (g_nCTScoreH1 + g_nTScoreH1 + 1))
 						g_CurrentRound--;
 			
 					if (GetConVarInt(g_CvarShowScores) == 1)
@@ -1919,15 +1916,15 @@ public Handle_TeamsVoteMenu(Handle:menu, MenuAction:action, param1, param2)
 				{
 					team = GetClientTeam(i);
 					if (team == 2)
-						ChangeClientTeam(i, 3);
+						CS_SwitchTeam(i, 3);
 					else if (team == 3)
-						ChangeClientTeam(i, 2);
+						CS_SwitchTeam(i, 2);
 				}
 			}
 		}
 		
 		isKo3Running = false;
-		PrintToChatAll("x04[%s]:\x03 队伍已选择!");
+		PrintToChatAll("x04[%s]:\x03 队伍已选择!", MODNAME);
 		Command_Mr15(0, 0);
 	}
 }
@@ -1966,8 +1963,8 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (GetConVarInt(g_CvarEnabled) == 1)
 	{
-		if (didLiveStarted == false && hasMixStarted == false && HudTimer != INVALID_HANDLE && g_HasVoteMap == false) {
-			KillTimer(HudTimer, false);
+		if ((didLiveStarted == false) && (hasMixStarted == false) && (g_HasVoteMap == false)) {
+			CloseHandle(HudTimer);
 		}
 		if (isPauseBeingUsed)
 		{
@@ -5120,23 +5117,19 @@ public Action:SwapTimer(Handle:timer)
 void HudUpdate()
 {
 	if (didLiveStarted == false && hasMixStarted == false) {
-
+		
 		HudTimer = CreateTimer(1.0, MenuRefresh_Timer, _, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
-
 	}
 }
 
 Action MenuRefresh_Timer(Handle Timer) {
 
 	if (didLiveStarted == false && hasMixStarted == false && g_HasVoteMap == false) {
-
 		UpdateReadyPanel();
 		return Plugin_Continue;
 
 	} else {
-
 		return Plugin_Stop;
-
 	}
 }
 
