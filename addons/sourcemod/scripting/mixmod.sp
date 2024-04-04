@@ -4532,8 +4532,8 @@ public Action:Command_JoinTeam(client, args)
 		return Plugin_Handled;
 	}
 	// 游戏进程中禁止换队
-	if (GetClientTeam(client) == CS_TEAM_CT || GetClientTeam(client) == CS_TEAM_T) {
-		if ((hasMixStarted == true) && (GetConVarInt(g_CvarAllowManualSwitching) == 0)) {
+	if ((hasMixStarted == true) && (GetClientTeam(client) == CS_TEAM_CT || GetClientTeam(client) == CS_TEAM_T)) {
+		if ((GetConVarInt(g_CvarAllowManualSwitching) == 0)) {
 			PrintToChat(client, "\x04[%s]:\x03 你无法更改队伍！", MODNAME);
 			return Plugin_Handled;
 		}
