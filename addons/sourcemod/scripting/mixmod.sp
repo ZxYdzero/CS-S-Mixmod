@@ -326,7 +326,6 @@ new Handle:g_CvarRpwShowPass = INVALID_HANDLE;
 new Handle:g_CvarRemoveProps = INVALID_HANDLE;
 new Handle:g_CvarAutoMixEnabled = INVALID_HANDLE;
 new Handle:g_CvarAutoMixRandomize = INVALID_HANDLE;
-new Handle:g_CvarAutoMixBan = INVALID_HANDLE;
 new Handle:g_CvarEnableAutoSourceTVRecord = INVALID_HANDLE;
 new Handle:g_CvarAutoSourceTVRecordSaveDir = INVALID_HANDLE;
 new Handle:g_CvarKnifeWinTeamVote = INVALID_HANDLE;
@@ -455,7 +454,6 @@ public OnPluginStart()
 	g_CvarRemoveProps = CreateConVar("sm_mixmod_remove_props", "0", "Remove map props (like barrels) at round start when mix is running? 0 - No, 1 - Yes.");
 	g_CvarAutoMixEnabled = CreateConVar("sm_mixmod_auto_warmod_enable", "0", "Enable Auto-Warmod and ready system? 0 - No, 1 - Yes.");
 	g_CvarAutoMixRandomize = CreateConVar("sm_mixmod_auto_warmod_random", "1", "After 10 players are ready, random the team players and start? 0 - No, 1 - Yes.");
-	g_CvarAutoMixBan = CreateConVar("sm_mixmod_auto_warmod_ban", "-1", "In minutes: how long to ban players who has left the server? <Negetive number> - Don't ban, <Positive Number> - Time, 0 - Permanent ban");
 	g_CvarEnableAutoSourceTVRecord = CreateConVar("sm_mixmod_autorecord_enable", "1", "Auto record the game when match is live? 0 - No, 1 - Yes.");
 	g_CvarAutoSourceTVRecordSaveDir = CreateConVar("sm_mixmod_autorecord_save_dir", "mix_records", "Save directatory for the auto-records (if folder doesn't exist, the record will be saved at: cstrike/ )");
 	g_CvarKnifeWinTeamVote = CreateConVar("sm_mixmod_knife_round_win_vote", "0", "Let the wining team in the knife round decide in which team they want to be? 0 - No, 1 - Yes.");
@@ -4455,19 +4453,6 @@ public Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadc
 			Command_RemovePass(0, 0);
 			PrintToChatAll("\x04[%s]:\x03 Sub is needed! password has been removed!");
 			*/
-		}
-		
-		decl String:reason[30];
-		GetEventString(event, "reason", reason, sizeof(reason));
-		if ((StrContains(reason, "Disconnect by user") != -1) && didLiveStarted == true && hasMixStarted == true && (GetClientTeam(client) != CS_TEAM_SPECTATOR))
-		{
-			new banTime = GetConVarInt(g_CvarAutoMixBan);
-			if (banTime >= 0)
-			{
-				new String:auth[64];
-				GetClientAuthId(client, AuthId_Steam2, auth, sizeof(auth));
-				ServerCommand("sm_addban %d %s Left the mix", banTime, auth);
-			}
 		}
 	}
 }
