@@ -4521,11 +4521,17 @@ public Action:Command_JoinTeam(client, args)
 {
 	new String:team[8];
 	GetCmdArg(1, team, sizeof(team));
-
-	if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0) && ((GetTeamClientCount(CS_TEAM_CT) + GetTeamClientCount(CS_TEAM_T) == 10))) // Mix is running and Manual switch is disabled! && He is not on spec team && And not going to switch to this team.
-	{
-		PrintToChat(client, "\x04[%s]:\x03 你此时无法更改队伍！", MODNAME);
-		CS_SwitchTeam(client, CS_TEAM_SPECTATOR);
+	if (GetTeamClientCount(CS_TEAM_CT) >= 5) {
+		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
+		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
+		return Plugin_Handled;
+	} else if (GetTeamClientCount(CS_TEAM_T) >= 5) {
+		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
+		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
+		return Plugin_Handled;
+	} else if ((hasMixStarted) && (GetConVarInt(g_CvarAllowManualSwitching) == 0)) {
+		PrintToChat(client, "\x04[%s]:\x03 你无法更改队伍！", MODNAME);
+		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
 	}
 	return Plugin_Continue;
