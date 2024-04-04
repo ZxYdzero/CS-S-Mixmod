@@ -4521,11 +4521,11 @@ public Action:Command_JoinTeam(client, args)
 {
 	new String:team[8];
 	GetCmdArg(1, team, sizeof(team));
-	if (GetTeamClientCount(CS_TEAM_CT) >= 5) {
+	if (GetTeamClientCount(CS_TEAM_CT) >= 5 && GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T) {
 		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
 		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
-	} else if (GetTeamClientCount(CS_TEAM_T) >= 5) {
+	} else if (GetTeamClientCount(CS_TEAM_T) >= 5 && GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T) {
 		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
 		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
