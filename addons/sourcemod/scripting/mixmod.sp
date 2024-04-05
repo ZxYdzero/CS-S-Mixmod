@@ -4519,14 +4519,14 @@ public Action:Command_JoinTeam(client, args)
 
 public Action:Command_JoinTeam(client, args)
 {
-	new String:team[8];
-	GetCmdArg(1, team, sizeof(team));
+	int team = GetCmdArgInt(1);
 	// 观察者在双方都有5人以上禁止入队
-	if (GetTeamClientCount(CS_TEAM_CT) >= 5 && GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T) {
+	if (team == CS_TEAM_CT && (GetTeamClientCount(CS_TEAM_CT) == 5) && (GetClientTeam(client) != CS_TEAM_CT) && (GetClientTeam(client) != CS_TEAM_T)) {
 		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
 		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
-	} else if (GetTeamClientCount(CS_TEAM_T) >= 5 && GetClientTeam(client) != CS_TEAM_CT && GetClientTeam(client) != CS_TEAM_T) {
+	}
+	if (team == CS_TEAM_T && (GetTeamClientCount(CS_TEAM_T) == 5) && (GetClientTeam(client) != CS_TEAM_CT) && (GetClientTeam(client) != CS_TEAM_T)) {
 		PrintToChat(client, "\x04[%s]:\x03 你无法更改到此队伍！", MODNAME);
 		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
 		return Plugin_Handled;
@@ -4537,11 +4537,11 @@ public Action:Command_JoinTeam(client, args)
 			PrintToChat(client, "\x04[%s]:\x03 你无法更改队伍！", MODNAME);
 			return Plugin_Handled;
 		}
-		if (GetTeamClientCount(CS_TEAM_CT) >= 5 && GetClientTeam(client) == CS_TEAM_T) {
+		if (team == CS_TEAM_CT && GetTeamClientCount(CS_TEAM_CT) >= 5 && GetClientTeam(client) == CS_TEAM_T) {
 			PrintToChat(client, "\x04[%s]:\x03 你无法更改队伍！", MODNAME);
 			return Plugin_Handled;
 		}
-		if (GetTeamClientCount(CS_TEAM_T) >= 5 && GetClientTeam(client) == CS_TEAM_CT) {
+		if (team == CS_TEAM_T && GetTeamClientCount(CS_TEAM_T) >= 5 && GetClientTeam(client) == CS_TEAM_CT) {
 			PrintToChat(client, "\x04[%s]:\x03 你无法更改队伍！", MODNAME);
 			return Plugin_Handled;
 		}
