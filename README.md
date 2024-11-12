@@ -13,7 +13,8 @@
 > * 添加比赛时服务器密码
 ## 安装
 - 先前往[Sourcemod网站](https://www.sourcemod.net/downloads.php?branch=stable)和 [Metamod网站](https://www.sourcemm.net/downloads.php?branch=stable)下载并安装插件平台
-- 去下载[kushal's [CS:S] Team Limits插件](https://forums.alliedmods.net/showthread.php?p=2699194)
+- 去下载[kushal's [CS:S] Team Limits插件](https://forums.alliedmods.net/showthread.php?p=2699194)和[Dragokas's [ANY] Restart Empty Server (or Map)
+插件](https://forums.alliedmods.net/showthread.php?p=2646280)
 - 然后将本项目的整个Zip解压到cstrike文件夹内
 - 启动服务器，然后关闭，可以在cstrike/cfg/sourcemod内找到sm_mixmod.cfg 更改Mixmod的参数
 - 完成
