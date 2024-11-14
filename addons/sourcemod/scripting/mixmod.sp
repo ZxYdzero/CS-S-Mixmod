@@ -1,6 +1,9 @@
 /* Mixmod Created by iDragon *
 Updates:
-- 10-11-24 (by Sparkle)
+- 11-14-24 (by Sparkle)
+	* 添加了!show与!hide用来开关准备菜单
+
+- 11-10-24 (by Sparkle)
 	* 添加一下功能：
 		除去雾气(sm_mixmod_delete_fog)
 		满人自动踢出未准备玩家
@@ -417,6 +420,7 @@ int Second = 30;
 bool isKicked = false;
 // 一些新的东西
 new Handle:HudTimer = INVALID_HANDLE;
+new bool:i_HidePanel[MAXPLAYERS+1] = {false, ...};
 
 public Plugin:myinfo =
 {
@@ -778,6 +782,13 @@ public OnPluginStart()
 	RegConsoleCmd("sm_mixhelp",
 		Command_MixHelp,
 		"Show plugins commands");
+	// 菜单显示与否
+	RegConsoleCmd("sm_show",
+		Command_MixShow,
+		"Show Ready Panel");
+	RegConsoleCmd("sm_hide",
+		Command_MixHide,
+		"Close Ready Panel");
 
 	RegConsoleCmd("say", Command_SayChat);
 	RegConsoleCmd("say_team", Command_SayChat);
@@ -3743,8 +3754,14 @@ public Action:Command_SayChat(client, args)
 	return Plugin_Continue;
 }
 
-public Action:Command_MixHide(client, args) {
+public Action:Command_MixShow(client, args) {
+	i_HidePanel[client] = false;
+	return Plugin_Continue;
+}
 
+public Action:Command_MixHide(client, args) {
+	i_HidePanel[client] = true;
+	return Plugin_Continue;
 }
 
 public Action:Command_MixHelp(client, args)
@@ -3810,6 +3827,8 @@ CreateHelpPanel()
 	AddMenuItem(g_HelpPanel, "sm_notready or sm_unready - Become not ready.", "sm_notready or sm_unready - Become not ready.");
 	AddMenuItem(g_HelpPanel, "sm_teams - Only when auto-mix running! see teams.", "sm_teams - Only when auto-mix running! see teams.");
 	AddMenuItem(g_HelpPanel, "sm_mixhelp - See all the plugin commands.", "sm_mixhelp - See all the plugin commands.");
+	AddMenuItem(g_HelpPanel, "sm_show - Show Ready Panel.", "sm_show - Show Ready Panel.");
+	AddMenuItem(g_HelpPanel, "sm_hide - Close Ready Panel.", "sm_hide - Close Ready Panel.");
 
 	AddMenuItem(g_HelpPanel, "-----------------------", "-----------------------");
 	AddMenuItem(g_HelpPanel, "--- Created by iDragon ---", "--- Created by iDragon ---");
@@ -4436,6 +4455,9 @@ public Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadc
 	g_GaggedPlayers[GetClientOfUserId(GetEventInt(event, "userid"))] = false;
 	g_MutedPlayers[GetClientOfUserId(GetEventInt(event, "userid"))] = false;
 		
+	if (i_HidePanel[GetClientOfUserId(GetEventInt(event, "userid"))] == true) {
+		i_HidePanel[GetClientOfUserId(GetEventInt(event, "userid"))] = false;
+	}
 	if (hasMixStarted)
 	{
 		// Reset the exiting player score...
@@ -4933,7 +4955,7 @@ Action UpdateReadyPanel()
 	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelText(readyStatus, "=====<- 准备系统 ->=====");
 	DrawPanelText(readyStatus, "\n \n");
-	DrawPanelText(readyStatus, "可用指令:\n!r或!ready 准备\n!unready 取消准备\n提示:\n十个人准备后可投票换图\n无rtv nominate");
+	DrawPanelText(readyStatus, "可用指令:\n!r或!ready 准备\n!unready 取消准备\n提示:\n十个人准备后可投票换图\n无rtv nominate\n!show可显示此菜单\n!hide可隐藏此菜单");
 	DrawPanelText(readyStatus, "\n \n");
 	DrawPanelItem(readyStatus, "已准备:");
 	Format(Ready, sizeof(Ready), "");
@@ -4988,7 +5010,7 @@ Action UpdateReadyPanel()
 
 	for (new i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientConnected(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true))
+		if (IsClientConnected(i) && (IsClientSourceTV(i) != true) && (IsClientReplay(i) != true) && i_HidePanel[i] == false)
 		{
 			SendPanelToClient(readyStatus, i, Handler_DoNothing, 1);
 		}
