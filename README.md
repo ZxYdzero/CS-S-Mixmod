@@ -17,4 +17,8 @@
 插件](https://forums.alliedmods.net/showthread.php?p=2646280)
 - 然后将本项目的整个Zip解压到cstrike文件夹内
 - 启动服务器，然后关闭，可以在cstrike/cfg/sourcemod内找到sm_mixmod.cfg 更改Mixmod的参数
+- 还需要修改cstrike/cfg/sourcemod/sm_restart_empty.cfg内的sm_restart_empty_method参数 把2改成3
 - 完成
+
+## 提示
+- 在打开服务器后请changelevel_next进行换图, 不然可能导致服务器崩溃
