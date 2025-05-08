@@ -15,7 +15,6 @@ void Mix_InitCommands()
     // 玩家命令
     RegConsoleCmd("sm_score", Mix_Command_Score, "显示当前比分");
     RegConsoleCmd("sm_mvp", Mix_Command_MVP, "显示当前MVP");
-    RegConsoleCmd("sm_hp", Mix_Command_HP, "显示敌人血量 (仅当你是死亡状态)");
     RegConsoleCmd("sm_ready", Mix_Command_Ready, "设置为准备状态");
     RegConsoleCmd("sm_r", Mix_Command_Ready, "设置为准备状态 (缩写)");
     RegConsoleCmd("sm_notready", Mix_Command_NotReady, "设置为未准备状态");
@@ -73,28 +72,6 @@ public Action Mix_Command_MVP(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
         Mix_ShowMVP(client);
-    }
-    return Plugin_Handled;
-}
-
-/**
- * 显示敌人血量命令
- */
-public Action Mix_Command_HP(int client, int args)
-{
-    if (GetConVarInt(g_hCvarEnabled) == 1) {
-        if (!IsPlayerAlive(client)) {
-            int spectateTarget = GetEntPropEnt(client, Prop_Send, "m_hObserverTarget");
-            int team = GetClientTeam(client);
-            
-            if (IsValidClient(spectateTarget) && GetClientTeam(spectateTarget) != team) {
-                int health = GetClientHealth(spectateTarget);
-                char name[MAX_NAME_LENGTH];
-                GetClientName(spectateTarget, name, sizeof(name));
-                
-                PrintToChat(client, "\x04[%s]:\x03 %s 的血量: \x04%d", MODNAME, name, health);
-            }
-        }
     }
     return Plugin_Handled;
 }
