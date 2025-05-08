@@ -330,7 +330,28 @@ public int Mix_HandleMapVoteMenu(Handle menu, MenuAction action, int param1, int
         
         // 延迟更换地图
         CreateTimer(3.0, Mix_ChangeMap, 0);
+
+        // 新增：地图投票结束后进入第二次准备
+        Mix_VoteMapEndCallback();
     }
     
     return 0;
-} 
+}
+
+/**
+ * 地图投票结束后处理
+ */
+void Mix_OnVoteMapEnd()
+{
+    Mix_ResetReadySystem();
+    g_bTenVoted = true;
+    PrintToChatAll("\x04[%s]:\x03 地图投票结束，请所有玩家再次输入 !ready 准备！", MODNAME);
+}
+
+/**
+ * 地图投票菜单结束后回调
+ */
+void Mix_VoteMapEndCallback()
+{
+    Mix_OnVoteMapEnd();
+}

@@ -7,31 +7,14 @@
 #endif
 #define _mixmod_ready_included
 
-/**
- * 更新准备系统状态
- */
-void Mix_UpdateReadySystem()
-{
-    if (GetConVarInt(g_hCvarAutoMixEnabled) == 1 && !g_bHasMixStarted) {
-        // 如果已有10名玩家准备就绪
-        if (g_iReadyCount >= 10) {
-            if (GetConVarInt(g_hCvarAutoMixRandomize) == 1) {
-                PrintToChatAll("\x04[%s]:\x03 10名玩家已准备就绪，正在随机分配队伍...", MODNAME);
-                Mix_RandomizeTeams();
-                
-                g_bIsItManual = false;
-                Mix_StartLive(0);
-            } else if (!g_bHasVoteMap && !g_bTenVoted) {
-                PrintToChatAll("\x04[%s]:\x03 10名玩家已准备就绪，开始地图投票...", MODNAME);
-                Mix_VoteMap();
-                g_bTenVoted = true;
-            }
-        }
-    }
-}
+// 新增：准备面板显示控制变量
+bool g_bReadyPanelVisible = true;
 
 Action Mix_CreateReadyPanel() 
 { 
+    if (!g_bReadyPanelVisible) {
+        return;
+    }
     if (g_hReadyStatus != INVALID_HANDLE) { 
         CloseHandle(g_hReadyStatus); 
         g_hReadyStatus = INVALID_HANDLE; 
@@ -42,7 +25,10 @@ Action Mix_CreateReadyPanel()
     Format(title, sizeof(title), "%s - 准备系统", MODNAME); 
     SetPanelTitle(g_hReadyStatus, title); 
     DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER);
-
+    // 换图之后显示
+    if (g_bTenVoted) {
+        PrintCenterTextAll("换图完毕 输入!r准备");
+    }
     // 可用指令 (整合并扩展自 UpdateReadyPanel 和 Mix_CreateReadyPanel)
     DrawPanelText(g_hReadyStatus, "=====<- 指令与状态 ->=====");
     DrawPanelText(g_hReadyStatus, "输入 !ready 或 !r 准备"); 
@@ -130,6 +116,25 @@ Action Mix_CreateReadyPanel()
     } 
 }
 
+// 在十人准备后隐藏准备面板
+void Mix_HideReadyPanel()
+{
+    g_bReadyPanelVisible = false;
+    if (g_hReadyStatus != INVALID_HANDLE) {
+        CloseHandle(g_hReadyStatus);
+        g_hReadyStatus = INVALID_HANDLE;
+    }
+}
+
+// 重新显示准备面板
+void Mix_ShowReadyPanel()
+{
+    if (!g_bReadyPanelVisible) {
+        g_bReadyPanelVisible = true;
+        Mix_CreateReadyPanel();
+    }
+}
+
 /**
  * 重置所有玩家的准备状态
  */
@@ -137,7 +142,7 @@ void Mix_ResetReadySystem()
 {
     g_bAllowReady = true;
     g_iReadyCount = 0;
-    
+    // g_bTenVoted = false; // 不要在这里重置g_bTenVoted，否则流程会出错
     for (int i = 1; i <= MaxClients; i++) {
         g_bReadyPlayers[i] = false;
         g_iReadyPlayersData[i] = -1;
