@@ -1,0 +1,416 @@
+"Phrases"
+{
+    // 通用消息
+    "Language Changed"
+    {
+        "#format"   "{1:s}"
+        "en"        "Language changed to {1}"
+        "chi"     "语言已更改为 {1}"
+        "ru"        "Язык изменен на {1}"
+    }
+
+    "Plugin Loaded"
+    {
+        "#format"   "{1:s}"
+        "en"        "Mix-Plugin v{1} loaded successfully"
+        "chi"     "Mix-Plugin v{1} 已成功加载"
+        "ru"        "Mix-Plugin v{1} успешно загружен"
+    }
+
+    // 比赛状态消息
+    "Match Not Started"
+    {
+        "en"        "Match has not started yet"
+        "chi"     "比赛尚未开始"
+        "ru"        "Матч еще не начался"
+    }
+
+    "Match Already Started"
+    {
+        "en"        "Match has already started!"
+        "chi"     "比赛已经开始!"
+        "ru"        "Матч уже начался!"
+    }
+
+    "Match In Progress"
+    {
+        "en"        "Match is in progress"
+        "chi"     "比赛正在进行中"
+        "ru"        "Матч в процессе"
+    }
+
+    "Round"
+    {
+        "#format"   "{1:d},{2:d},{3:d}"
+        "en"        "Round {1} - Half {2}/{3}"
+        "chi"     "回合 {1} - 半场 {2}/{3}"
+        "ru"        "Раунд {1} - Половина {2}/{3}"
+    }
+
+    "Score"
+    {
+        "#format"   "{1:s},{2:d},{3:s},{4:d}"
+        "en"        "{1} {2}, {3} {4}"
+        "chi"     "{1} {2}, {3} {4}"
+        "ru"        "{1} {2}, {3} {4}"
+    }
+
+    "Not Live"
+    {
+        "en"        "Not live yet!"
+        "chi"     "尚未启动!"
+        "ru"        "Еще не запущен!"
+    }
+
+    "Match Point"
+    {
+        "#format"   "{1:s}"
+        "en"        "Match point for {1}"
+        "chi"     "赛点 for {1}"
+        "ru"        "Матч-пойнт для {1}"
+    }
+
+    "Teams Swapped"
+    {
+        "en"        "Teams have been swapped!"
+        "chi"     "队伍互换完成!"
+        "ru"        "Команды поменялись местами!"
+    }
+
+    "Type Live"
+    {
+        "en"        "Type !live to start"
+        "chi"     "输入 !live 开始"
+        "ru"        "Введите !live для начала"
+    }
+
+    "Match Ended"
+    {
+        "en"        "Match has ended"
+        "chi"     "比赛结束"
+        "ru"        "Матч завершен"
+    }
+
+    "Winner Is"
+    {
+        "#format"   "{1:s}"
+        "en"        "Winner is: {1}"
+        "chi"     "获胜者是: {1}"
+        "ru"        "Победитель: {1}"
+    }
+
+    "Draw"
+    {
+        "en"        "It's a draw!"
+        "chi"     "平局!"
+        "ru"        "Ничья!"
+    }
+
+    // 准备系统消息
+    "Ready System Disabled"
+    {
+        "en"        "Ready system is currently disabled"
+        "chi"     "准备系统当前已禁用"
+        "ru"        "Система готовности в настоящее время отключена"
+    }
+
+    "Already Ready"
+    {
+        "en"        "You are already ready!"
+        "chi"     "你已经准备就绪了!"
+        "ru"        "Вы уже готовы!"
+    }
+
+    "Player Ready"
+    {
+        "#format"   "{1:s},{2:d}"
+        "en"        "{1} is ready! ({2}/10)"
+        "chi"     "{1} 已准备就绪! ({2}/10)"
+        "ru"        "{1} готов! ({2}/10)"
+    }
+
+    "Not Ready"
+    {
+        "en"        "You are not ready yet!"
+        "chi"     "你还未准备!"
+        "ru"        "Вы еще не готовы!"
+    }
+
+    "Player Not Ready"
+    {
+        "#format"   "{1:s},{2:d}"
+        "en"        "{1} is no longer ready! ({2}/10)"
+        "chi"     "{1} 取消了准备状态! ({2}/10)"
+        "ru"        "{1} больше не готов! ({2}/10)"
+    }
+
+    "Ten Players Ready"
+    {
+        "en"        "10 players are ready, starting map vote..."
+        "chi"     "10名玩家已准备，开始地图投票..."
+        "ru"        "10 игроков готовы, начинаем голосование за карту..."
+    }
+
+    "Ten Players Ready Again"
+    {
+        "en"        "10 players are ready again..."
+        "chi"     "10名玩家再次准备完毕..."
+        "ru"        "10 игроков снова готовы..."
+    }
+
+    "Randomizing Teams"
+    {
+        "en"        "Randomizing teams..."
+        "chi"     "正在随机分配队伍..."
+        "ru"        "Случайное распределение команд..."
+    }
+
+    "Starting Knife Round"
+    {
+        "en"        "Starting knife round..."
+        "chi"     "进入拼刀选边..."
+        "ru"        "Начинаем ножевой раунд..."
+    }
+
+    "Force Ready"
+    {
+        "en"        "Admin has forced all players to be ready!"
+        "chi"     "管理员已强制所有玩家准备!"
+        "ru"        "Администратор принудительно подготовил всех игроков!"
+    }
+
+    // 面板消息
+    "Panel Hidden"
+    {
+        "en"        "Panel hidden"
+        "chi"     "面板已隐藏"
+        "ru"        "Панель скрыта"
+    }
+
+    "Panel Shown"
+    {
+        "en"        "Panel shown"
+        "chi"     "面板已显示"
+        "ru"        "Панель отображена"
+    }
+
+    // 地图相关消息
+    "Map List Error"
+    {
+        "en"        "Cannot display map list, please contact admin"
+        "chi"     "无法显示地图列表，请联系管理员"
+        "ru"        "Невозможно отобразить список карт, обратитесь к администратору"
+    }
+
+    "Admin Selected Map"
+    {
+        "#format"   "{1:s},{2:s}"
+        "en"        "Admin {1} selected map {2}"
+        "chi"     "管理员 {1} 选择了地图 {2}"
+        "ru"        "Администратор {1} выбрал карту {2}"
+    }
+
+    // 队伍交换消息
+    "Teams Will Swap"
+    {
+        "en"        "Teams will swap after this round\nPlease do not change your team"
+        "chi"     "此回合后，队伍将自动更换\n请不要更换你的队伍"
+        "ru"        "Команды поменяются местами после этого раунда\nПожалуйста, не меняйте свою команду"
+    }
+
+    // 刀局消息
+    "Knife Round Started"
+    {
+        "en"        "Knife round started..."
+        "chi"     "刀局已打开..."
+        "ru"        "Ножевой раунд начался..."
+    }
+
+    "Knife Round Info"
+    {
+        "en"        "Knife round to decide sides"
+        "chi"     "拼刀选边"
+        "ru"        "Ножевой раунд для выбора сторон"
+    }
+
+    // 队伍管理消息
+    "Spec Command Usage"
+    {
+        "en"        "Usage: !spec <player name/ID>"
+        "chi"     "用法: !spec <玩家名称/ID>"
+        "ru"        "Использование: !spec <имя игрока/ID>"
+    }
+
+    // 语音管理消息
+    "Mute Command Usage"
+    {
+        "en"        "Usage: !mmute <player name/ID>"
+        "chi"     "用法: !mmute <玩家名称/ID>"
+        "ru"        "Использование: !mmute <имя игрока/ID>"
+    }
+
+    "Player Muted"
+    {
+        "#format"   "{1:s}"
+        "en"        "{1} has been muted"
+        "chi"     "{1} 被静音了"
+        "ru"        "{1} был заглушен"
+    }
+
+    "Player Unmuted"
+    {
+        "#format"   "{1:s}"
+        "en"        "{1} has been unmuted"
+        "chi"     "{1} 取消了静音"
+        "ru"        "{1} был разглушен"
+    }
+
+    "Gag Command Usage"
+    {
+        "en"        "Usage: !mgag <player name/ID>"
+        "chi"     "用法: !mgag <玩家名称/ID>"
+        "ru"        "Использование: !mgag <имя игрока/ID>"
+    }
+
+    "Player Gagged"
+    {
+        "#format"   "{1:s}"
+        "en"        "{1} has been gagged"
+        "chi"     "{1} 被禁言了"
+        "ru"        "{1} был заткнут"
+    }
+
+    "Player Ungagged"
+    {
+        "#format"   "{1:s}"
+        "en"        "{1} has been ungagged"
+        "chi"     "{1} 取消了禁言"
+        "ru"        "{1} был разткнут"
+    }
+
+    // 统计系统消息
+    "MVP"
+    {
+        "#format"   "{1:s},{2:d}"
+        "en"        "MVP: {1} with {2} kills"
+        "chi"     "MVP: {1}, 击杀数: {2}"
+        "ru"        "MVP: {1} с {2} убийствами"
+    }
+
+    "Your Kills"
+    {
+        "#format"   "{1:d}"
+        "en"        "You killed {1} enemies"
+        "chi"     "你击杀了 {1} 个敌人"
+        "ru"        "Вы убили {1} врагов"
+    }
+
+    "Team Damage"
+    {
+        "#format"   "{1:s},{2:s},{3:d}"
+        "en"        "Team damage! {1} did {3} damage to {2}"
+        "chi"     "友伤! {1} 对 {2} 造成了 {3} 点伤害"
+        "ru"        "Урон по своим! {1} нанес {3} урона {2}"
+    }
+
+    "Clutch Win"
+    {
+        "#format"   "{1:s},{2:d}"
+        "en"        "{1} won a 1v{2} clutch!"
+        "chi"     "{1} 赢得了一个 1v{2} 残局!"
+        "ru"        "{1} выиграл клатч 1v{2}!"
+    }
+
+    "Stats Command"
+    {
+        "en"        "Usage: !stats [player] - Show player statistics"
+        "chi"     "用法: !stats [玩家] - 显示玩家统计信息"
+        "ru"        "Использование: !stats [игрок] - Показать статистику игрока"
+    }
+
+    "Stats Title"
+    {
+        "#format"   "{1:s}"
+        "en"        "Statistics for {1}"
+        "chi"     "{1} 的统计信息"
+        "ru"        "Статистика для {1}"
+    }
+
+    "Stats Kills"
+    {
+        "#format"   "{1:d}"
+        "en"        "Kills: {1}"
+        "chi"     "击杀: {1}"
+        "ru"        "Убийства: {1}"
+    }
+
+    "Stats Deaths"
+    {
+        "#format"   "{1:d}"
+        "en"        "Deaths: {1}"
+        "chi"     "死亡: {1}"
+        "ru"        "Смерти: {1}"
+    }
+
+    "Stats KD"
+    {
+        "#format"   "{1:.2f}"
+        "en"        "K/D Ratio: {1}"
+        "chi"     "K/D 比率: {1}"
+        "ru"        "K/D Соотношение: {1}"
+    }
+
+    "Stats Headshots"
+    {
+        "#format"   "{1:d},{2:.1f}"
+        "en"        "Headshots: {1} ({2}%)"
+        "chi"     "爆头: {1} ({2}%)"
+        "ru"        "Хедшоты: {1} ({2}%)"
+    }
+
+    "Stats Damage"
+    {
+        "#format"   "{1:d},{2:.1f}"
+        "en"        "Damage: {1} (ADR: {2})"
+        "chi"     "伤害: {1} (平均每回合伤害: {2})"
+        "ru"        "Урон: {1} (ADR: {2})"
+    }
+
+    "Stats Assists"
+    {
+        "#format"   "{1:d}"
+        "en"        "Assists: {1}"
+        "chi"     "助攻: {1}"
+        "ru"        "Ассисты: {1}"
+    }
+
+    "Stats Clutches"
+    {
+        "#format"   "{1:d}"
+        "en"        "Clutches: {1}"
+        "chi"     "残局获胜: {1}"
+        "ru"        "Клатчи: {1}"
+    }
+
+    "Stats Not Found"
+    {
+        "#format"   "{1:s}"
+        "en"        "No statistics found for {1}"
+        "chi"     "未找到 {1} 的统计信息"
+        "ru"        "Статистика для {1} не найдена"
+    }
+
+    "Stats System Disabled"
+    {
+        "en"        "Statistics system is disabled"
+        "chi"     "统计系统已禁用"
+        "ru"        "Система статистики отключена"
+    }
+
+    "Match Stats"
+    {
+        "en"        "Match Statistics"
+        "chi"     "比赛统计数据"
+        "ru"        "Статистика матча"
+    }
+}

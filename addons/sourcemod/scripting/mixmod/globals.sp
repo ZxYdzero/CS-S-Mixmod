@@ -1,5 +1,12 @@
 /**
  * 全局变量模块
+ *
+ * 本模块包含插件使用的所有全局变量，按功能分类组织以便于维护和更新。
+ * 所有变量都使用匈牙利命名法，前缀表示变量类型：
+ * - g_i: 整数
+ * - g_b: 布尔值
+ * - g_h: 句柄
+ * - g_sz: 字符串
  */
 
 #if defined _mixmod_globals_included
@@ -10,21 +17,28 @@
 // =============================================================================
 // 回合和比分计数相关变量
 // =============================================================================
-int g_iCurrentRound = 1;
-int g_iCurrentHalf = 1;
-int g_iCTScore = 0, g_iTScore = 0, g_iCTScore2 = 0, g_iTScore2 = 0;
-int g_iCTScoreH1 = 0, g_iTScoreH1 = 0;
+int g_iCurrentRound = 1;        // 当前回合数
+int g_iCurrentHalf = 1;         // 当前半场（1或2）
+int g_iCTScore = 0;             // CT队伍当前半场得分
+int g_iTScore = 0;              // T队伍当前半场得分
+int g_iCTScore2 = 0;            // CT队伍第二半场得分
+int g_iTScore2 = 0;             // T队伍第二半场得分
+int g_iCTScoreH1 = 0;           // CT队伍第一半场得分（用于记录）
+int g_iTScoreH1 = 0;            // T队伍第一半场得分（用于记录）
 
 // =============================================================================
 // 插件状态相关变量
 // =============================================================================
-bool g_bHasMixStarted = false;
-bool g_bDidLiveStarted = false;
-bool g_bSwapNow = false;
-bool g_bIsKo3Running = false;
-bool g_bIsRandomPasswordWasLastPw = false;
-bool g_bIsBuyZoneDisabled = false;
-bool g_bIsRandomBeingUsed = false;
+bool g_bHasMixStarted = false;      // 是否已开始比赛
+bool g_bDidLiveStarted = false;     // 是否已开始Live
+bool g_bSwapNow = false;            // 是否需要立即交换队伍
+bool g_bIsKo3Running = false;       // 是否正在进行刀局
+// 以下变量在某些模块中可能未使用，但保留以便将来扩展
+#pragma unused g_bIsRandomPasswordWasLastPw
+bool g_bIsRandomPasswordWasLastPw = false; // 上次是否使用了随机密码
+bool g_bIsBuyZoneDisabled = false;  // 购买区是否被禁用
+#pragma unused g_bIsRandomBeingUsed
+bool g_bIsRandomBeingUsed = false;  // 是否正在使用随机功能
 
 // =============================================================================
 // 插件调试和功能选项
@@ -72,7 +86,8 @@ Handle g_hCvarCustomLiveCfg = INVALID_HANDLE;
 Handle g_hCvarCustomPracCfg = INVALID_HANDLE;
 Handle g_hCvarCustomMr3Cfg = INVALID_HANDLE;
 Handle g_hCvarKickAdmins = INVALID_HANDLE;
-Handle g_hCvarDisableSayCommand = INVALID_HANDLE;
+#pragma unused g_hCvarDisableSayCommand
+Handle g_hCvarDisableSayCommand = INVALID_HANDLE; // 禁用聊天命令的ConVar
 Handle g_hCvarMapListFrom = INVALID_HANDLE;
 Handle g_hCvarEnableKnifeRound = INVALID_HANDLE;
 Handle g_hCvarUseKo3Command = INVALID_HANDLE;
@@ -85,7 +100,8 @@ Handle g_hCvarEnableAutoSourceTVRecord = INVALID_HANDLE;
 Handle g_hCvarAutoSourceTVRecordSaveDir = INVALID_HANDLE;
 Handle g_hCvarKnifeWinTeamVote = INVALID_HANDLE;
 Handle g_hCvarEnablePasswords = INVALID_HANDLE;
-Handle g_hCvarAllowManualSwitching = INVALID_HANDLE;
+#pragma unused g_hCvarAllowManualSwitching
+Handle g_hCvarAllowManualSwitching = INVALID_HANDLE; // 允许手动切换队伍的ConVar
 Handle g_hCvarDelayBeforeSwapping = INVALID_HANDLE;
 Handle g_hCvarShowTkMessage = INVALID_HANDLE;
 Handle g_hCvarRemovePassWhenMixIsEnded = INVALID_HANDLE;
@@ -118,8 +134,9 @@ Handle g_hReadyStatus = INVALID_HANDLE;
 // =============================================================================
 // 自动录制相关
 // =============================================================================
-bool g_bIsRecording = false;
-bool g_bIsRecordManual = false;
+bool g_bIsRecording = false;     // 是否正在录制
+#pragma unused g_bIsRecordManual
+bool g_bIsRecordManual = false;  // 是否是手动开始的录制
 
 // =============================================================================
 // 客户端分数保存（重新开始时）
@@ -142,8 +159,9 @@ bool g_bGaggedPlayers[MAXPLAYERS+1] = {false, ...};
 // =============================================================================
 // 最后进入的玩家
 // =============================================================================
-char g_szLastEntered_SteamID[35];
-char g_szLastEntered_Name[35];
+#pragma unused g_szLastEntered_SteamID, g_szLastEntered_Name
+char g_szLastEntered_SteamID[35];  // 最后进入玩家的Steam ID
+char g_szLastEntered_Name[35];     // 最后进入玩家的名称
 
 // =============================================================================
 // 地图属性标记
@@ -172,9 +190,19 @@ bool g_bHidePanel[MAXPLAYERS+1] = {false, ...};
 
 /**
  * 重置比赛参数和玩家状态
+ *
+ * 此函数用于重置所有与比赛相关的状态变量，通常在比赛结束或需要重新开始时调用。
+ * 它会重置比分、回合计数、玩家状态等所有相关变量。
  */
 void Mix_ResetMatchState()
 {
+    // 在比赛结束时显示统计数据
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        // 向所有玩家显示统计数据
+        Mix_ShowAllPlayersStats();
+    }
+
+    // 重置比赛状态变量
     g_bHasMixStarted = false;
     g_bDidLiveStarted = false;
     g_bSwapNow = false;
@@ -186,6 +214,8 @@ void Mix_ResetMatchState()
     g_bIsMixMenuGenerated = false;
     g_bHasVoteMap = false;
     g_bTenVoted = false;
+
+    // 重置回合和比分计数
     g_iCurrentRound = 1;
     g_iCurrentHalf = 1;
     g_iCTScore = 0;
@@ -194,16 +224,23 @@ void Mix_ResetMatchState()
     g_iTScore2 = 0;
     g_iCTScoreH1 = 0;
     g_iTScoreH1 = 0;
+
+    // 重置准备系统状态
     g_iReadyCount = 0;
     g_bAllowReady = true;
     g_bIsItManual = true;
+
+    // 重置录制状态
     g_bIsRecording = false;
     g_bIsRecordManual = false;
     g_bSaveClientsScore = false;
+
+    // 重置地图和计时器状态
     g_szMatchMap[0] = '\0';
     g_iSecond = 30;
     g_bIsKicked = false;
 
+    // 重置所有玩家相关数组，但保留统计数据
     for (int i = 0; i <= MaxClients; i++)
     {
         g_bReadyPlayers[i] = false;
@@ -215,62 +252,24 @@ void Mix_ResetMatchState()
         g_bGaggedPlayers[i] = false;
         g_bHidePanel[i] = false;
     }
+
+    // 重置统计数据
+    Mix_ResetAllStats();
 }
 
 /**
  * 初始化全局变量
+ *
+ * 此函数在插件启动时调用，用于初始化所有全局变量为默认值。
+ * 它与 Mix_ResetMatchState 函数类似，但更全面，会初始化所有全局变量。
  */
 void Mix_InitGlobals()
 {
-    g_iCurrentRound = 1;
-    g_iCurrentHalf = 1;
-    g_iCTScore = 0;
-    g_iTScore = 0;
-    g_iCTScore2 = 0;
-    g_iTScore2 = 0;
-    g_iCTScoreH1 = 0;
-    g_iTScoreH1 = 0;
+    // 调用重置函数来初始化大部分变量
+    Mix_ResetMatchState();
 
-    g_bHasMixStarted = false;
-    g_bDidLiveStarted = false;
-    g_bSwapNow = false;
-    g_bIsKo3Running = false;
-    g_bIsRandomPasswordWasLastPw = false;
-    g_bIsBuyZoneDisabled = false;
-    g_bIsRandomBeingUsed = false;
-
-    g_bIsMapListGenerated = false;
-    g_bIsMixMenuGenerated = false;
-
-    g_iReadyCount = 0;
-    g_bAllowReady = true;
-    g_bIsItManual = true;
-
-    g_bIsRecording = false;
-    g_bIsRecordManual = false;
-    g_bSaveClientsScore = false;
-
+    // 初始化其他未在重置函数中处理的变量
     g_szLastEntered_SteamID = "NOT_VALID";
     g_szLastEntered_Name = "NOT_VALID";
-
     g_bIsMapValidToRemoveProps = true;
-
-    g_bHasVoteMap = false;
-    g_szMatchMap = "";
-    g_bTenVoted = false;
-    g_iSecond = 30;
-    g_bIsKicked = false;
-
-    // 重置玩家相关数组
-    for (int i = 0; i <= MAXPLAYERS; i++)
-    {
-        g_bReadyPlayers[i] = false;
-        g_iReadyPlayersData[i] = -1;
-        g_iScoresOfTheRound[i] = 0;
-        g_iScoresOfTheGame[i] = 0;
-        g_iDeathsOfTheGame[i] = 0;
-        g_bMutedPlayers[i] = false;
-        g_bGaggedPlayers[i] = false;
-        g_bHidePanel[i] = false;
-    }
 }

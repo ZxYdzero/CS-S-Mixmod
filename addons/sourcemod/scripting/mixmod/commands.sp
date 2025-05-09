@@ -21,7 +21,7 @@ void Mix_InitCommands()
     RegConsoleCmd("sm_nr", Mix_Command_NotReady, "设置为未准备状态 (缩写)");
     RegConsoleCmd("sm_sp", Mix_Command_ShowHidePanel, "显示或隐藏指南");
     RegConsoleCmd("sm_help", Mix_Command_Help, "显示帮助");
-    
+
     // 管理员命令
     RegAdminCmd("sm_mix", Mix_Command_Mix, ACCESS_FLAG, "显示Mix管理菜单");
     RegAdminCmd("sm_mr12", Mix_Command_Mr12, ACCESS_FLAG, "执行mr12.cfg并开始满十");
@@ -39,13 +39,13 @@ void Mix_InitCommands()
     RegAdminCmd("sm_ko3", Mix_Command_Ko3, ACCESS_FLAG, "开始刀局");
     RegAdminCmd("sm_forceready", Mix_Command_ForceReady, ACCESS_FLAG, "强制所有玩家准备");
     RegAdminCmd("sm_mapvote", Mix_Command_MapVote, ACCESS_FLAG, "管理员强制开启地图投票");
-    
+
     // 密码相关命令
     RegAdminCmd("sm_password", Mix_Command_Password, ACCESS_FLAG, "设置服务器密码");
     RegAdminCmd("sm_removepassword", Mix_Command_RemovePassword, ACCESS_FLAG, "移除服务器密码");
     RegAdminCmd("sm_rpass", Mix_Command_RemovePassword, ACCESS_FLAG, "移除服务器密码 (别名)");
     RegAdminCmd("sm_rpw", Mix_Command_RandomPassword, ACCESS_FLAG, "设置随机密码");
-    
+
     // 玩家管理命令
     RegAdminCmd("sm_spec", Mix_Command_Spec, ACCESS_FLAG, "将玩家移至观察者");
     RegAdminCmd("sm_mmute", Mix_Command_Mute, ACCESS_FLAG, "静音指定玩家");
@@ -83,11 +83,13 @@ public Action Mix_Command_Ready(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1 && GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
         if (!g_bAllowReady) {
-            PrintToChat(client, "\x04[%s]:\x03 准备系统当前已禁用", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Ready System Disabled");
             return Plugin_Handled;
         }
         if (g_bHasMixStarted) {
-            PrintToChat(client, "\x04[%s]:\x03 比赛已在进行中", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Match In Progress");
             return Plugin_Handled;
         }
         if (!g_bReadyPlayers[client]) {
@@ -95,30 +97,63 @@ public Action Mix_Command_Ready(int client, int args)
             g_iReadyCount++;
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
-            PrintToChatAll("\x04[%s]:\x03 %s 已准备就绪! (%d/10)", MODNAME, name, g_iReadyCount);
+            for (int i = 1; i <= MaxClients; i++) {
+                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                    SetGlobalTransTarget(i);
+                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Player Ready", name, g_iReadyCount);
+                }
+            }
+
+            // 调用API事件
+            Mix_API_OnPlayerReady(client);
 
             if (g_iReadyCount >= 10) {
                 Mix_HideReadyPanel();
                 if (!g_bTenVoted) {
-                    PrintToChatAll("\x04[%s]:\x03 10名玩家已准备，开始地图投票...", MODNAME);
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Ten Players Ready");
+                        }
+                    }
                     Mix_VoteMap();
                     g_bTenVoted = true;
                 } else {
-                    PrintToChatAll("\x04[%s]:\x03 10名玩家再次准备完毕...", MODNAME);
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Ten Players Ready Again");
+                        }
+                    }
                     // 分队/拼刀
                     if (GetConVarInt(g_hCvarAutoMixRandomize) == 1) {
-                        PrintToChatAll("\x04[%s]:\x03 正在随机分配队伍...", MODNAME);
+                        for (int i = 1; i <= MaxClients; i++) {
+                            if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                SetGlobalTransTarget(i);
+                                PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Randomizing Teams");
+                            }
+                        }
                         Mix_RandomizeTeams();
                         g_bIsItManual = false;
                         if (GetConVarInt(g_hCvarEnableKnifeRound) == 1) {
-                            PrintToChatAll("\x04[%s]:\x03 进入拼刀选边...", MODNAME);
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Starting Knife Round");
+                                }
+                            }
                             Mix_StartKnifeRound(0);
                         } else {
                             Mix_StartLive(0);
                         }
                     } else {
                         if (GetConVarInt(g_hCvarEnableKnifeRound) == 1) {
-                            PrintToChatAll("\x04[%s]:\x03 进入拼刀选边...", MODNAME);
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Starting Knife Round");
+                                }
+                            }
                             Mix_StartKnifeRound(0);
                         } else {
                             Mix_StartLive(0);
@@ -130,7 +165,8 @@ public Action Mix_Command_Ready(int client, int args)
                 Mix_ShowReadyPanel();
             }
         } else {
-            PrintToChat(client, "\x04[%s]:\x03 你已经准备就绪了!", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Already Ready");
         }
     }
     return Plugin_Handled;
@@ -143,11 +179,13 @@ public Action Mix_Command_NotReady(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1 && GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
         if (!g_bAllowReady) {
-            PrintToChat(client, "\x04[%s]:\x03 准备系统当前已禁用", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Ready System Disabled");
             return Plugin_Handled;
         }
         if (g_bHasMixStarted) {
-            PrintToChat(client, "\x04[%s]:\x03 比赛已在进行中", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Match In Progress");
             return Plugin_Handled;
         }
         if (g_bReadyPlayers[client]) {
@@ -155,10 +193,19 @@ public Action Mix_Command_NotReady(int client, int args)
             g_iReadyCount--;
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
-            PrintToChatAll("\x04[%s]:\x03 %s 取消了准备状态! (%d/10)", MODNAME, name, g_iReadyCount);
+            for (int i = 1; i <= MaxClients; i++) {
+                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                    SetGlobalTransTarget(i);
+                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Player Not Ready", name, g_iReadyCount);
+                }
+            }
             Mix_ShowReadyPanel(); // 有人取消准备，重新显示面板
+
+            // 调用API事件
+            Mix_API_OnPlayerNotReady(client);
         } else {
-            PrintToChat(client, "\x04[%s]:\x03 你还未准备!", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Not Ready");
         }
     }
     return Plugin_Handled;
@@ -171,11 +218,13 @@ public Action Mix_Command_ShowHidePanel(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
         g_bHidePanel[client] = !g_bHidePanel[client];
-        
+
         if (g_bHidePanel[client]) {
-            PrintToChat(client, "\x04[%s]:\x03 面板已隐藏", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Panel Hidden");
         } else {
-            PrintToChat(client, "\x04[%s]:\x03 面板已显示", MODNAME);
+            SetGlobalTransTarget(client);
+            PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Panel Shown");
         }
     }
     return Plugin_Handled;
@@ -231,14 +280,22 @@ public Action Mix_Command_Prac(int client, int args)
 public Action Mix_Command_Map(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
+        // 确保地图列表已生成
         if (!g_bIsMapListGenerated) {
             Mix_CreateMapList();
         }
-        if (g_hMapListMenu != INVALID_HANDLE) {
-            CloseHandle(g_hMapListMenu);
-            g_hMapListMenu = INVALID_HANDLE; // 重置为无效
+
+        // 如果地图列表菜单无效，重新创建
+        if (g_hMapListMenu == INVALID_HANDLE) {
+            Mix_CreateMapList(); // 这将重新创建菜单
         }
-        DisplayMenu(g_hMapListMenu, client, MENU_TIME_FOREVER);
+
+        // 显示菜单
+        if (g_hMapListMenu != INVALID_HANDLE) {
+            DisplayMenu(g_hMapListMenu, client, MENU_TIME_FOREVER);
+        } else {
+            PrintToChat(client, "\x04[%s]:\x03 无法显示地图列表，请联系管理员", MODNAME);
+        }
     }
     return Plugin_Handled;
 }
@@ -404,10 +461,10 @@ public Action Mix_Command_Spec(int client, int args)
             PrintToChat(client, "\x04[%s]:\x03 用法: !spec <玩家名称/ID>", MODNAME);
             return Plugin_Handled;
         }
-        
+
         char arg[64];
         GetCmdArg(1, arg, sizeof(arg));
-        
+
         int target = FindTarget(client, arg);
         if (target != -1) {
             Mix_MoveToSpectator(client, target);
@@ -426,17 +483,17 @@ public Action Mix_Command_Mute(int client, int args)
             PrintToChat(client, "\x04[%s]:\x03 用法: !mmute <玩家名称/ID>", MODNAME);
             return Plugin_Handled;
         }
-        
+
         char arg[64];
         GetCmdArg(1, arg, sizeof(arg));
-        
+
         int target = FindTarget(client, arg);
         if (target != -1) {
             g_bMutedPlayers[target] = !g_bMutedPlayers[target];
-            
+
             char name[MAX_NAME_LENGTH];
             GetClientName(target, name, sizeof(name));
-            
+
             if (g_bMutedPlayers[target]) {
                 SetClientListeningFlags(target, VOICE_MUTED);
                 PrintToChatAll("\x04[%s]:\x03 %s 被静音了", MODNAME, name);
@@ -459,17 +516,17 @@ public Action Mix_Command_Gag(int client, int args)
             PrintToChat(client, "\x04[%s]:\x03 用法: !mgag <玩家名称/ID>", MODNAME);
             return Plugin_Handled;
         }
-        
+
         char arg[64];
         GetCmdArg(1, arg, sizeof(arg));
-        
+
         int target = FindTarget(client, arg);
         if (target != -1) {
             g_bGaggedPlayers[target] = !g_bGaggedPlayers[target];
-            
+
             char name[MAX_NAME_LENGTH];
             GetClientName(target, name, sizeof(name));
-            
+
             if (g_bGaggedPlayers[target]) {
                 PrintToChatAll("\x04[%s]:\x03 %s 被禁言了", MODNAME, name);
             } else {
@@ -489,7 +546,7 @@ public void Mix_OnGameRestarted(ConVar convar, const char[] oldValue, const char
     if (value > 0) {
         if (g_bHasMixStarted && g_bDidLiveStarted && !g_bIsKo3Running) {
             g_bSaveClientsScore = true;
-            
+
             for (int i = 1; i <= MaxClients; i++) {
                 if (IsClientInGame(i)) {
                     g_iScoresOfTheGame[i] = GetEntProp(i, Prop_Data, "m_iFrags");

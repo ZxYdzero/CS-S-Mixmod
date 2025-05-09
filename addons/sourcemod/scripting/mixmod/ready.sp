@@ -10,20 +10,20 @@
 // 新增：准备面板显示控制变量
 bool g_bReadyPanelVisible = true;
 
-Action Mix_CreateReadyPanel() 
-{ 
+Action Mix_CreateReadyPanel()
+{
     if (!g_bReadyPanelVisible) {
-        return;
+        return Plugin_Continue;
     }
-    if (g_hReadyStatus != INVALID_HANDLE) { 
-        CloseHandle(g_hReadyStatus); 
-        g_hReadyStatus = INVALID_HANDLE; 
+    if (g_hReadyStatus != INVALID_HANDLE) {
+        CloseHandle(g_hReadyStatus);
+        g_hReadyStatus = INVALID_HANDLE;
     }
-    g_hReadyStatus = CreatePanel(); 
-    
-    char title[64]; 
-    Format(title, sizeof(title), "%s - 准备系统", MODNAME); 
-    SetPanelTitle(g_hReadyStatus, title); 
+    g_hReadyStatus = CreatePanel();
+
+    char title[64];
+    Format(title, sizeof(title), "%s - 准备系统", MODNAME);
+    SetPanelTitle(g_hReadyStatus, title);
     DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER);
     // 换图之后显示
     if (g_bTenVoted) {
@@ -31,17 +31,17 @@ Action Mix_CreateReadyPanel()
     }
     // 可用指令 (整合并扩展自 UpdateReadyPanel 和 Mix_CreateReadyPanel)
     DrawPanelText(g_hReadyStatus, "=====<- 指令与状态 ->=====");
-    DrawPanelText(g_hReadyStatus, "输入 !ready 或 !r 准备"); 
+    DrawPanelText(g_hReadyStatus, "输入 !ready 或 !r 准备");
     DrawPanelText(g_hReadyStatus, "输入 !notready 或 !nr 取消准备");
     DrawPanelText(g_hReadyStatus, "输入 !sp 切换菜单显示");
     DrawPanelText(g_hReadyStatus, "提示: 十人准备后可投票换图 ");
     DrawPanelText(g_hReadyStatus, "无 RTV / Nominate 功能");
 
-    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER); 
+    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER);
 
-    char readyLine[128]; 
+    char readyLine[128];
 
-    DrawPanelText(g_hReadyStatus, readyLine); 
+    DrawPanelText(g_hReadyStatus, readyLine);
     DrawPanelText(g_hReadyStatus, "\n"); // 添加一些间隔
 
 
@@ -56,26 +56,26 @@ Action Mix_CreateReadyPanel()
     Format(sSpectatorsList, sizeof(sSpectatorsList), "");
 
 
-    for (new i = 1; i <= MaxClients; i++) 
-    { 
+    for (new i = 1; i <= MaxClients; i++)
+    {
         if (IsClientInGame(i) && !IsClientSourceTV(i) && !IsClientReplay(i))
-        { 
-            GetClientName(i, sPlayerName, sizeof(sPlayerName)); 
-            
-            if (GetClientTeam(i) == CS_TEAM_SPECTATOR) { 
-                Format(sSpectatorsList, sizeof(sSpectatorsList), "%s%s\n", sSpectatorsList, sPlayerName); 
+        {
+            GetClientName(i, sPlayerName, sizeof(sPlayerName));
+
+            if (GetClientTeam(i) == CS_TEAM_SPECTATOR) {
+                Format(sSpectatorsList, sizeof(sSpectatorsList), "%s%s\n", sSpectatorsList, sPlayerName);
             } else {
-                if (g_bReadyPlayers[i]) 
-                { 
-                    Format(sReadyPlayersList, sizeof(sReadyPlayersList), "%s%s\n", sReadyPlayersList, sPlayerName); 
+                if (g_bReadyPlayers[i])
+                {
+                    Format(sReadyPlayersList, sizeof(sReadyPlayersList), "%s%s\n", sReadyPlayersList, sPlayerName);
                     // actualReadyCount++;
-                } 
-                else 
-                { 
-                    Format(sNotReadyPlayersList, sizeof(sNotReadyPlayersList), "%s%s\n", sNotReadyPlayersList, sPlayerName); 
+                }
+                else
+                {
+                    Format(sNotReadyPlayersList, sizeof(sNotReadyPlayersList), "%s%s\n", sNotReadyPlayersList, sPlayerName);
                 }
             }
-        } 
+        }
     }
 
 
@@ -104,16 +104,18 @@ Action Mix_CreateReadyPanel()
     } else {
         DrawPanelText(g_hReadyStatus, sSpectatorsList);
     }
-    
-    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER); 
 
-    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER); 
-    // 将面板显示给所有符合条件的客户端 
-    for (int i = 1; i <= MaxClients; i++) { 
-        if (IsClientInGame(i) && !IsFakeClient(i) && !g_bHidePanel[i]) { 
-            SendPanelToClient(g_hReadyStatus, i, Mix_HandleDoNothing, 1); 
-        } 
-    } 
+    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER);
+
+    DrawPanelItem(g_hReadyStatus, "", ITEMDRAW_SPACER);
+    // 将面板显示给所有符合条件的客户端
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientInGame(i) && !IsFakeClient(i) && !g_bHidePanel[i]) {
+            SendPanelToClient(g_hReadyStatus, i, Mix_HandleDoNothing, 1);
+        }
+    }
+
+    return Plugin_Continue;
 }
 
 // 在十人准备后隐藏准备面板
@@ -159,7 +161,7 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
         // 倒计时结束，踢出未准备的玩家
         if (!g_bIsKicked) {
             g_bIsKicked = true;
-            
+
             for (int i = 1; i <= MaxClients; i++) {
                 if (IsClientInGame(i) && !IsFakeClient(i)) {
                     if (!g_bReadyPlayers[i]) {
@@ -168,13 +170,13 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
                 }
             }
         }
-        
+
         return Plugin_Stop;
     } else {
         // 更新倒计时并通知所有玩家
         PrintCenterTextAll("未准备玩家将在 %d 秒后被踢出", g_iSecond);
         g_iSecond--;
-        
+
         return Plugin_Continue;
     }
 }

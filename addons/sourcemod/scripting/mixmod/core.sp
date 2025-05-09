@@ -14,7 +14,7 @@ void Mix_InitConVars()
 {
     // 载入翻译文件
     LoadTranslations("common.phrases");
-    
+
     // 创建ConVars
     g_hCvarEnabled = CreateConVar("sm_mixmod_enable", "1", "启用或禁用此插件及其功能: 0 - 禁用, 1 - 启用");
     g_hCvarShowMoneyAndWeapons = CreateConVar("sm_mixmod_showmoney", "1", "显示玩家的金钱和武器信息给队友? 0 - 否, 1 - 是");
@@ -59,10 +59,10 @@ void Mix_InitConVars()
     // 插件版本控制
     g_hPluginVersion = CreateConVar("sm_mixmod_version", PLUGIN_VERSION, "满十插件版本", FCVAR_SS_ADDED|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
     SetConVarString(g_hPluginVersion, PLUGIN_VERSION);
-    
+
     // 监听版本改变
     HookConVarChange(g_hPluginVersion, Mix_OnVersionChanged);
-    
+
     // 查找游戏偏移量和ConVars
     Mix_FindGameOffsets();
 }
@@ -75,27 +75,33 @@ void Mix_FindGameOffsets()
     // 查找玩家金钱偏移量
     g_iAccount = FindSendPropInfo("CCSPlayer", "m_iAccount");
     if (g_iAccount == -1) {
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Account Offset Not Found"短语
         PrintToChatAll("\x04[%s]:\x03 无法找到m_iAccount偏移! - 金钱信息将不会显示!", MODNAME);
     }
-    
+
     // 查找游戏重启ConVar
     g_hRestartGame = FindConVar("mp_restartgame");
     if (g_hRestartGame == INVALID_HANDLE) {
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Restart Game ConVar Not Found"短语
         PrintToChatAll("\x04[%s]:\x03 无法找到mp_restartgame变量!", MODNAME);
         SetFailState("[%s]: 无法找到mp_restartgame变量!", MODNAME);
     }
     HookConVarChange(g_hRestartGame, Mix_OnGameRestarted);
-    
+
     // 查找冻结时间ConVar
     g_hFreezeTime = FindConVar("mp_freezetime");
     if (g_hFreezeTime == INVALID_HANDLE) {
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Freeze Time ConVar Not Found"短语
         PrintToChatAll("\x04[%s]:\x03 无法找到mp_freezetime变量!", MODNAME);
         SetFailState("[%s]: 无法找到mp_freezetime变量!", MODNAME);
     }
-    
+
     // 查找服务器密码ConVar
     g_hPassword = FindConVar("sv_password");
-    
+
     // 查找服务器名称ConVar
     g_hHostName = FindConVar("hostname");
     GetConVarString(g_hHostName, g_szHostName, sizeof(g_szHostName));
@@ -123,13 +129,13 @@ void Mix_OnMapStart()
 
     // 预加载声音
     PrecacheSound("ambient/misc/brass_bell_C.wav", true);
-    
+
     // 重置地图投票相关变量
     if (g_bHasVoteMap == true && g_bTenVoted == true) {
         g_bHasVoteMap = false;
         Mix_ResetReadySystem();
     }
-    
+
     // 重置玩家状态
     for (int i = 0; i <= MaxClients; i++) {
         g_bGaggedPlayers[i] = false;
@@ -142,32 +148,36 @@ void Mix_OnMapStart()
     g_bIsKo3Running = false;
     g_bIsItManual = true;
     g_bIsRandomBeingUsed = false;
-    
+
     // 重置最后进入玩家信息
     g_szLastEntered_SteamID = "NOT_VALID";
     g_szLastEntered_Name = "NOT_VALID";
-    
+
     // 重新查找金钱偏移量
     g_iAccount = FindSendPropInfo("CCSPlayer", "m_iAccount");
     if (g_iAccount == -1) {
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Account Offset Not Found"短语
         PrintToChatAll("\x04[%s]:\x03 无法找到m_iAccount偏移! - 金钱信息将不会显示!", MODNAME);
     }
-    
+
     // 重新查找游戏重启ConVar
     g_hRestartGame = FindConVar("mp_restartgame");
     if (g_hRestartGame == INVALID_HANDLE) {
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Restart Game ConVar Not Found"短语
         PrintToChatAll("\x04[%s]:\x03 无法找到mp_restartgame变量!", MODNAME);
         SetFailState("[%s]: 无法找到mp_restartgame变量!", MODNAME);
     }
     HookConVarChange(g_hRestartGame, Mix_OnGameRestarted);
-    
+
     // 获取服务器名称
     GetConVarString(g_hHostName, g_szHostName, sizeof(g_szHostName));
-    
+
     // 重置地图列表状态
     g_bIsMapListGenerated = false;
     Mix_CreateMapList();
-    
+
     // 检查当前地图是否可以移除道具
     Mix_CheckPropsForCurrentMap();
 }
@@ -183,7 +193,7 @@ void Mix_OnMapEnd()
 
     g_bIsRecording = false;
     g_bIsRecordManual = false;
-    
+
     // 为防止换图后玩家数量变化，重置相关变量
     if (g_bHasVoteMap == false && g_bTenVoted == true) {
         g_bHasVoteMap = false;
@@ -193,18 +203,70 @@ void Mix_OnMapEnd()
 
 /**
  * 当插件卸载时调用
+ *
+ * 此函数在插件被卸载前调用，用于清理资源和恢复游戏状态。
  */
 void Mix_OnPluginEnd()
 {
-    // TODO 暂时无用
+    // 停止任何正在进行的录制
+    if (g_bIsRecording) {
+        ServerCommand("tv_stoprecord");
+        g_bIsRecording = false;
+    }
+
+    // 恢复购买区
+    if (g_bIsBuyZoneDisabled) {
+        Mix_EnableBuyZone();
+    }
+
+    // 关闭所有计时器
+    if (g_hHudTimer != INVALID_HANDLE) {
+        KillTimer(g_hHudTimer);
+        g_hHudTimer = INVALID_HANDLE;
+    }
+
+    if (g_hReadyStatus != INVALID_HANDLE) {
+        CloseHandle(g_hReadyStatus);
+        g_hReadyStatus = INVALID_HANDLE;
+    }
+
+    // 关闭所有菜单句柄
+    if (g_hMapListMenu != INVALID_HANDLE) {
+        CloseHandle(g_hMapListMenu);
+        g_hMapListMenu = INVALID_HANDLE;
+    }
+
+    if (g_hMixMenu != INVALID_HANDLE) {
+        CloseHandle(g_hMixMenu);
+        g_hMixMenu = INVALID_HANDLE;
+    }
+
+    if (g_hHelpPanel != INVALID_HANDLE) {
+        CloseHandle(g_hHelpPanel);
+        g_hHelpPanel = INVALID_HANDLE;
+    }
+
+    if (g_hWinTeamPanel != INVALID_HANDLE) {
+        CloseHandle(g_hWinTeamPanel);
+        g_hWinTeamPanel = INVALID_HANDLE;
+    }
+
+    // 移除服务器密码（如果启用了密码功能）
+    if (GetConVarInt(g_hCvarEnablePasswords) == 1) {
+        ServerCommand("sv_password \"\"");
+    }
 }
 
 /**
  * 当游戏帧更新时调用
+ *
+ * 此函数在每个游戏帧更新时调用，可用于实现需要持续检查的功能。
+ * 注意：此函数会被频繁调用，应避免在此执行耗时操作。
  */
 void Mix_OnGameFrame()
 {
-    // TODO 暂时无用
+    // 目前没有需要在每帧执行的操作
+    // 保留此函数以便将来可能的扩展
 }
 
 /**
@@ -224,7 +286,7 @@ void Mix_CheckPropsForCurrentMap()
     char propMaplist[2048];
     GetCurrentMap(mapName, sizeof(mapName));
     GetConVarString(g_hCvarDontRemovePropsMaps, propMaplist, sizeof(propMaplist));
-    
+
     g_bIsMapValidToRemoveProps = true;
     if (StrContains(propMaplist, mapName) != -1) {
         g_bIsMapValidToRemoveProps = false;
@@ -243,14 +305,14 @@ void Mix_OnClientAuthorized(int client, const char[] auth)
 
         // 复制STEAM ID
         Format(auth2, sizeof(auth2), "%s", auth);
-        
+
         // 记录最后进入的玩家信息
         g_szLastEntered_SteamID = auth2;
         g_szLastEntered_Name = name;
-        
+
         if (g_bHasMixStarted) {
             // 通知玩家比赛正在进行
             CreateTimer(60.0, Mix_InformPlayerAboutTheMix, client);
         }
     }
-} 
+}

@@ -1,5 +1,8 @@
 /**
  * 团队管理模块
+ *
+ * 本模块包含与团队管理相关的功能，包括队伍交换、随机分配队伍等。
+ * 所有函数都以 Mix_ 前缀开头，表示它们属于 Mixmod 插件。
  */
 
 #if defined _mixmod_teams_included
@@ -7,37 +10,11 @@
 #endif
 #define _mixmod_teams_included
 
-// 确保CS团队常量定义正确
-#if !defined CS_TEAM_T
-#define CS_TEAM_T 2
-#endif
-
-#if !defined CS_TEAM_CT
-#define CS_TEAM_CT 3
-#endif
-
-#if !defined CS_TEAM_SPECTATOR
-#define CS_TEAM_SPECTATOR 1
-#endif
+// 注意：团队常量现在统一在 constants.sp 中定义，这里不再重复定义
 
 // =============================================================================
-// CT和T模型
+// 团队管理功能
 // =============================================================================
-static const String:g_szCTModels[4][] = 
-{
-    "models/player/ct_urban.mdl",
-    "models/player/ct_gsg9.mdl",
-    "models/player/ct_sas.mdl",
-    "models/player/ct_gign.mdl"
-};
-
-static const String:g_szTModels[4][] = 
-{
-    "models/player/t_phoenix.mdl",
-    "models/player/t_leet.mdl",
-    "models/player/t_arctic.mdl",
-    "models/player/t_guerilla.mdl"
-};
 
 /**
  * 交换队伍
@@ -65,7 +42,7 @@ void Mix_SwapTeams()
         }
     }
     PrintToChatAll("\x04[%s]:\x03 所有玩家已交换队伍", MODNAME);
-    
+
     if (flag) {
         g_bDidLiveStarted = true;
     }
@@ -73,30 +50,29 @@ void Mix_SwapTeams()
 
 /**
  * 半场结束时交换队伍的定时器回调
+ *
+ * @param timer 触发此回调的计时器句柄
+ * @return 计时器继续状态
  */
 public Action Mix_SwapTimer(Handle timer)
 {
     g_bDidLiveStarted = false; // 在交换队伍前禁用Live状态
-    
+
     int team;
     for (int client = 1; client <= MaxClients; client++) {
         if (IsClientInGame(client) && !IsFakeClient(client) && IsClientConnected(client)) {
             team = GetClientTeam(client);
-            
+
             if (team == CS_TEAM_CT) {
                 CS_SwitchTeam(client, CS_TEAM_T);
-                if (IsPlayerAlive(client)) {
-                    SetEntityModel(client, g_szTModels[GetRandomInt(0, 3)]);
-                }
+                // 不再设置模型，因为现在换边不需要选择模型
             } else if (team == CS_TEAM_T) {
                 CS_SwitchTeam(client, CS_TEAM_CT);
-                if (IsPlayerAlive(client)) {
-                    SetEntityModel(client, g_szCTModels[GetRandomInt(0, 3)]);
-                }
+                // 不再设置模型，因为现在换边不需要选择模型
             }
         }
     }
-    
+
     if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 1) {
         g_bDidLiveStarted = true;
     }
@@ -106,7 +82,7 @@ public Action Mix_SwapTimer(Handle timer)
 
 /**
  * 移除玩家的枪械
- * 
+ *
  * @param client 目标客户端
  */
 void Mix_RemovePlayerGuns(int client)
@@ -114,8 +90,8 @@ void Mix_RemovePlayerGuns(int client)
     int gunEnt;
     for (int i = 0; i < 5; i++) {
         if (i == 2) // 不移除刀
-            continue; 
-            
+            continue;
+
         while ((gunEnt = GetPlayerWeaponSlot(client, i)) != -1) {
             RemovePlayerItem(client, gunEnt);
         }
@@ -132,14 +108,14 @@ void Mix_RandomizeCTPlayers()
     int numSwitched = 0;
     while (numSwitched < 5) {
         int client = Mix_GetRandomPlayer(TEAM_T);
-        
+
         if (client != -1) {
             Mix_SwitchPlayerTeam(client, CS_TEAM_CT);
-        
+
             if (IsPlayerAlive(client)) {
                 CS_RespawnPlayer(client);
             }
-            
+
             numSwitched++;
         } else {
             LogMessage("随机分配CT队员时出错...");
@@ -151,7 +127,7 @@ void Mix_RandomizeCTPlayers()
 
 /**
  * 切换玩家队伍并设置相应的模型
- * 
+ *
  * @param client 目标客户端索引
  * @param team   目标队伍
  */
@@ -167,25 +143,26 @@ void Mix_SwitchPlayerTeam(int client, int team)
 
 /**
  * 设置随机模型
- * 
+ *
  * @param client 目标客户端索引
  * @param team   目标队伍
+ *
+ * 注意：此函数已不再设置模型，因为现在换边不需要选择模型。
+ * 保留此函数是为了向后兼容，避免其他模块调用此函数时出错。
  */
 void Mix_SetRandomModel(int client, int team)
 {
-    int random = GetRandomInt(0, 3);
-    
-    switch (team) {
-        case CS_TEAM_T:
-            SetEntityModel(client, g_szTModels[random]);
-        case CS_TEAM_CT:
-            SetEntityModel(client, g_szCTModels[random]);
+    // 不再设置模型，因为现在换边不需要选择模型
+    // 此函数保留为空函数，以保持向后兼容性
+    // 使用参数以避免编译警告
+    if (client > 0 && team > 0) {
+        // 仅为了使用参数，不执行任何操作
     }
 }
 
 /**
  * 获取指定队伍中的随机玩家
- * 
+ *
  * @param team 目标队伍
  * @return     随机玩家索引，如果没有找到则返回-1
  */
@@ -193,13 +170,13 @@ int Mix_GetRandomPlayer(int team)
 {
     int[] players = new int[MaxClients+1];
     int playerCount = 0;
-    
+
     for (int i = 1; i <= MaxClients; i++) {
         if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == team) {
             players[playerCount++] = i;
         }
     }
-    
+
     if (playerCount == 0) {
         return -1;
     } else {
@@ -209,43 +186,43 @@ int Mix_GetRandomPlayer(int team)
 
 /**
  * 禁用购买区
- * 
+ *
  * @return 操作是否成功
  */
 bool Mix_DisableBuyZone()
 {
     int ent = -1;
     bool disabled = false;
-    
+
     while ((ent = FindEntityByClassname(ent, "func_buyzone")) != -1) {
         AcceptEntityInput(ent, "Disable");
         disabled = true;
     }
-    
+
     return disabled;
 }
 
 /**
  * 启用购买区
- * 
+ *
  * @return 操作是否成功
  */
 bool Mix_EnableBuyZone()
 {
     int ent = -1;
     bool enabled = false;
-    
+
     while ((ent = FindEntityByClassname(ent, "func_buyzone")) != -1) {
         AcceptEntityInput(ent, "Enable");
         enabled = true;
     }
-    
+
     return enabled;
 }
 
 /**
  * 踢出指定队伍的玩家
- * 
+ *
  * @param client         执行命令的管理员
  * @param team           要踢出的队伍
  * @param adminsImmunity 是否踢出管理员
@@ -304,7 +281,7 @@ void Mix_RandomizeTeams()
             Mix_SwitchPlayerTeam(i, CS_TEAM_T);
         }
     }
-    
+
     // 随机选择5名T玩家并移至CT队伍
     Mix_RandomizeCTPlayers();
     PrintToChatAll("\x04[%s]:\x03 队伍已随机分配!", MODNAME);
@@ -312,17 +289,17 @@ void Mix_RandomizeTeams()
 
 /**
  * 将玩家移至观察者队伍
- * 
+ *
  * @param client       执行命令的客户端
  * @param targetClient 目标客户端
  */
 void Mix_MoveToSpectator(int client, int targetClient)
 {
     ChangeClientTeam(targetClient, TEAM_SPEC);
-    
+
     char targetName[MAX_NAME_LENGTH];
     GetClientName(targetClient, targetName, sizeof(targetName));
-    
+
     PrintToChat(targetClient, "\x04[%s]:\x03 你已被移至观察者队伍!", MODNAME);
     PrintToChat(client, "\x04[%s]:\x03 %s 已被移至观察者队伍!", MODNAME, targetName);
-} 
+}

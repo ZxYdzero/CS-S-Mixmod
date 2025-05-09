@@ -58,7 +58,7 @@ Updates:
 
 - 07-06-12 (v4.2)
 	* sm_mvp has been added to show mvp kills during a game.
-	
+
 - 02-06-12 (v4.1b):
 	* Fixed a bug with auto-recording. (A new record wasn't started right after a mix ended).
 
@@ -84,7 +84,7 @@ Updates:
 	* Fixed the MVP System.
 	* sm_pcw Added to Mix-Help menu. (sm_pcw - Will remember the game scores, even after RR).
 	* Enable/Disable MVP Stats has been added to admin menu.
-	
+
 - 12-05-12 (V3.8):
 	* Added support for MVP.
 	- 	sm_mixmod_show_mvp (Default: "1")
@@ -93,7 +93,7 @@ Updates:
 
 - 04-06-2011 - 11-05-12 (v3.6-v3.7b)
 	* Some changes. I don't remember them...
-	
+
 - 03-09-2011 (v3.5):
 	* Fixed some problems that musosoft helped me find (I don't remember them - few days has left already and I forgot to note them).
 	* TK-Damage is now showing the armor damage that has been done too!
@@ -225,9 +225,9 @@ Updates:
 	* Loose idantation warnings when compiling - fixed!
 
 - 17-07-2011 (v1.0):
-	* Released this plugin. 
-	
-	
+	* Released this plugin.
+
+
 */
 #pragma newdecls required
 #pragma semicolon 1
@@ -253,13 +253,15 @@ Updates:
 #include "mixmod/ready.sp"           // 准备系统
 #include "mixmod/ui.sp"              // 用户界面
 #include "mixmod/util.sp"            // 辅助功能
+#include "mixmod/stats.sp"           // 统计系统
+#include "mixmod/api.sp"             // API接口
 
 // =============================================================================
 // 插件信息
 // =============================================================================
 public Plugin myinfo =
 {
-	name = "Mix-Plugin",
+    name = "Mix-Plugin",
     author = "iDragon, Sparkle (Updates), Refactored Version",
     description = "提供完整的比赛管理系统，包括队伍管理、比分记录和地图选择",
     version = PLUGIN_VERSION,
@@ -272,24 +274,43 @@ public Plugin myinfo =
 
 /**
  * 插件初始化
+ *
+ * 此函数在插件加载时调用，负责初始化所有子系统和注册必要的钩子。
  */
 public void OnPluginStart()
 {
-    // 初始化所有子系统
-    Mix_InitConstants();     // 初始化常量
+    // 初始化所有子系统（按依赖顺序）
+    Mix_InitConstants();     // 初始化常量（必须最先初始化）
     Mix_InitGlobals();       // 初始化全局变量
+    Mix_InitConVars();       // 创建ConVars（在命令和事件之前初始化）
+    // 加载翻译文件
+    LoadTranslations("mixmod.phrases");
+    Mix_InitStats();         // 初始化统计系统
+    Mix_InitAPI();           // 初始化API接口
     Mix_InitCommands();      // 注册命令
     Mix_InitEvents();        // 注册事件钩子
-    Mix_InitConVars();       // 创建ConVars
     Mix_InitMaps();          // 初始化地图系统
-    Mix_InitUI();            // 初始化UI
-    
+    Mix_InitUI();            // 初始化UI（依赖于其他系统）
+
     // 自动生成配置文件
-    AutoExecConfig(true, "sm_mixmod");
+    AutoExecConfig(true, CONFIG_FILENAME);
+
+    // 输出插件加载信息
+    LogMessage("Mix-Plugin v%s 已成功加载", PLUGIN_VERSION);
+    PrintToServer("[%s] Mix-Plugin v%s 已成功加载", MODNAME, PLUGIN_VERSION);
+
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientInGame(i) && !IsFakeClient(i)) {
+            SetGlobalTransTarget(i);
+            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Plugin Loaded", PLUGIN_VERSION);
+        }
+    }
 }
 
 /**
  * 当地图结束时
+ *
+ * 此函数在地图结束时调用，负责清理与当前地图相关的资源。
  */
 public void OnMapEnd()
 {
@@ -298,6 +319,8 @@ public void OnMapEnd()
 
 /**
  * 当地图开始时
+ *
+ * 此函数在新地图加载完成时调用，负责初始化与地图相关的功能。
  */
 public void OnMapStart()
 {
@@ -306,6 +329,11 @@ public void OnMapStart()
 
 /**
  * 当客户端授权时
+ *
+ * 此函数在玩家连接并通过授权后调用，用于记录玩家信息和处理相关逻辑。
+ *
+ * @param client 客户端索引
+ * @param auth   客户端的授权ID（通常是Steam ID）
  */
 public void OnClientAuthorized(int client, const char[] auth)
 {
@@ -314,6 +342,8 @@ public void OnClientAuthorized(int client, const char[] auth)
 
 /**
  * 当游戏帧更新时
+ *
+ * 此函数在每个游戏帧更新时调用，可用于实现需要持续检查的功能。
  */
 public void OnGameFrame()
 {
@@ -322,6 +352,8 @@ public void OnGameFrame()
 
 /**
  * 当插件卸载时
+ *
+ * 此函数在插件被卸载前调用，负责清理资源和恢复游戏状态。
  */
 public void OnPluginEnd()
 {

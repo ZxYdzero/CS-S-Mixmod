@@ -17,10 +17,12 @@ void Mix_InitEvents()
     HookEvent("round_end", Mix_Event_RoundEnd);
     HookEvent("bomb_exploded", Mix_Event_BombExploded);
     HookEvent("bomb_defused", Mix_Event_BombDefused);
+    HookEvent("bomb_planted", Mix_Event_BombPlanted);
     HookEvent("player_spawn", Mix_Event_PlayerSpawn);
     HookEvent("player_hurt", Mix_Event_PlayerHurt);
     HookEvent("player_death", Mix_Event_PlayerDeath);
     HookEvent("player_disconnect", Mix_Event_PlayerDisconnect);
+    HookEvent("weapon_fire", Mix_Event_WeaponFire);
 }
 
 /**
@@ -29,15 +31,15 @@ void Mix_InitEvents()
 public Action Mix_Event_PlayerSpawn(Handle event, const char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId(GetEventInt(event, "userid"));
-    
+
     if (g_bMutedPlayers[client]) {
         SetClientListeningFlags(client, VOICE_MUTED);
     }
-    
+
     if (GetConVarInt(g_hCvarShowMVP) == 1) {
         g_iScoresOfTheRound[client] = 0;
     }
-        
+
     if (g_bSaveClientsScore && (GetConVarInt(g_hCvarShowMVP) == 1)) {
         if (IsClientInGame(client)) {
             SetEntProp(client, Prop_Data, "m_iFrags", g_iScoresOfTheGame[client]);
@@ -54,15 +56,26 @@ public Action Mix_Event_PlayerSpawn(Handle event, const char[] name, bool dontBr
 public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBroadcast)
 {
     Mix_HudUpdate();
-    
+
+    // 只有在比赛正式开始后才更新统计数据
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_Stats_OnRoundStart();
+    }
+
+    // 调用API事件
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_API_OnRoundStart(g_iCurrentRound, g_iCurrentHalf);
+    }
+
     if (GetConVarInt(g_hCvarEnabled) == 1) {
         if (g_bIsKo3Running) {
             if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 1) {
-                PrintToChatAll("\x04[%s]:\x03 刀局已打开...", MODNAME);
+                PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Knife Round Started");
             } else if (g_bHasMixStarted) {
-                PrintToChatAll("\x04[%s]:\x03 刀局已打开... 输入 !live 开始比赛", MODNAME);
+                PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Knife Round Started");
+                PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Type Live");
             }
-            
+
             for (int i = 1; i <= MaxClients; i++) {
                 if (!IsClientInGame(i) || !IsPlayerAlive(i)) {
                     continue;
@@ -71,51 +84,65 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                 SetEntProp(i, Prop_Send, "m_bHasHelmet", 1);
                 SetEntProp(i, Prop_Send, "m_ArmorValue", 100);
             }
-            
-            PrintToChatAll("\x04[%s]:\x03 拼刀选边", MODNAME);
+
+            PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Knife Round Info");
             return Plugin_Continue;
         }
-        
+
         if (g_bHasMixStarted) {
             if (GetConVarInt(g_hCvarRemoveProps) == 1) {
                 Mix_RemoveProps();
             }
-            
+
             char teamAName[32];
             char teamBName[32];
             GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
             GetConVarString(g_hCvarCusomNameTeamT, teamBName, sizeof(teamBName));
-            
+
             if ((g_iTScoreH1 == -1) || (g_iCTScoreH1 == -1)) {
                 g_iTScoreH1 = 0;
                 g_iCTScoreH1 = 0;
             }
-            
+
             // 确保记分板显示正确的分数
             SetTeamScore(3, g_iCTScoreH1);
             SetTeamScore(2, g_iTScoreH1);
-            
+
             if (g_iCurrentHalf == 1) {
                 if (g_iCurrentRound == 0) {
                     g_iCurrentRound = 1;
                 }
-                    
+
                 if (g_iCurrentRound > (g_iCTScoreH1 + g_iTScoreH1 + 1)) {
                     g_iCurrentRound--;
                 }
 
                 if (GetConVarInt(g_hCvarShowScores) == 1) {
-                    PrintToChatAll("\x04[%s]:\x03 回合\x03 %d \x04- 半场进度\x03 %d\x04 /\x03 2\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_iCurrentRound, g_iCurrentHalf, teamAName, g_iCTScoreH1, teamBName, g_iTScoreH1);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            // 根据客户端语言设置翻译目标
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Round", g_iCurrentRound, g_iCurrentHalf, 2);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Score", teamAName, g_iCTScoreH1, teamBName, g_iTScoreH1);
+                        }
+                    }
                 }
-                
+
                 if (!g_bDidLiveStarted) {
-                    PrintToChatAll("\x04[%s]:\x03 尚未开始!", MODNAME);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Not Live");
+                        }
+                    }
                 }
             } else if (g_iCurrentHalf == 2) {
                 if (g_iCurrentRound == 0) {
                     g_iCurrentRound = 1;
                 }
-                    
+
                 // 检查比赛是否结束
                 if ((g_iCTScore == 13) || (g_iTScore == 13) || ((g_iCTScore == 12) && (g_iTScore == 12) && (GetConVarInt(g_hCvarMr3Enabled) == 0))) {
                     if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
@@ -135,10 +162,10 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                             CreateTimer(3.0, Mix_InformMatchEnd, 1);
                         }
                     }
-                    
+
                     g_bHasMixStarted = false;
                     g_bDidLiveStarted = false;
-                    
+
                     g_bIsItManual = true;
                     if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
                         g_bAllowReady = true;
@@ -150,18 +177,18 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                             g_iReadyPlayersData[i] = -1;
                         }
                     }
-            
+
                     g_iCurrentRound = 1;
                     g_iCurrentHalf = 1;
                     g_iTScore = -1;
                     g_iCTScore = -1;
-                    
+
                     g_bSaveClientsScore = false;
-            
+
                     SetConVarString(g_hHostName, g_szHostName);
-            
+
                     Mix_ExecutePracConfig(0);
-                    
+
                     if (GetConVarInt(g_hCvarRemovePassWhenMixIsEnded) == 1) {
                         Mix_RemovePassword(0);
                     }
@@ -169,94 +196,162 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                     if (g_iCurrentRound > (g_iCTScoreH1 + g_iTScoreH1 + 1)) {
                         g_iCurrentRound--;
                     }
-            
+
                     if (GetConVarInt(g_hCvarShowScores) == 1) {
-                        PrintToChatAll("\x04[%s]:\x03 回合\x03 %d \x04- 半场进度\x03 %d\x04 /\x03 2\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_iCurrentRound, g_iCurrentHalf, teamAName, g_iCTScore, teamBName, g_iTScore);
+                        // 使用多语言系统
+                        for (int i = 1; i <= MaxClients; i++) {
+                            if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                SetGlobalTransTarget(i);
+                                PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Round", g_iCurrentRound, g_iCurrentHalf, 2);
+                                PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Score", teamAName, g_iCTScore, teamBName, g_iTScore);
+                            }
+                        }
                     }
-                    
+
                     // 检查是否需要开始MR3
                     if ((g_iCTScore == 12) && (g_iTScore == 12) && (GetConVarInt(g_hCvarMr3Enabled) == 1)) {
                         g_iCTScore2 = g_iCTScore;
                         g_iTScore2 = g_iTScore;
-                        
+
                         float time = GetConVarFloat(g_hCvarDelayBeforeSwapping);
                         if (time < 0.1) {
                             time = 0.1;
                         }
                         CreateTimer(time, Mix_SwapTimer);
-                        
+
                         g_iCurrentRound = 1;
                         g_iCurrentHalf = 3;
                         if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
                             g_bDidLiveStarted = false;
                         }
-                        
+
                         if (GetConVarInt(g_hCvarPlayTeamSwapedSound) == 1) {
                             EmitSoundToAll("ambient/misc/brass_bell_C.wav");
                         }
                         Mix_ExecuteMr3Config(0);
-                        
+
+                        // 调用API事件
+                        Mix_API_OnHalfTime(g_iCTScore, g_iTScore);
+
                         if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) {
-                            PrintToChatAll("\x04[%s]:\x03 队伍互换 Mr3 设置已加载! \x01- \x03输入\x04 !live \x03开始.", MODNAME);
+                            // 使用多语言系统
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Type Live");
+                                }
+                            }
                         } else {
-                            PrintToChatAll("\x04[%s]:\x03 队伍互换 Mr3 设置已加载!", MODNAME);
+                            // 使用多语言系统
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                                }
+                            }
                         }
                     } else {
                         if (g_iCTScore == 12) {
-                            PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamAName);
+                            // 使用多语言系统
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamAName);
+                                }
+                            }
                         }
                         if (g_iTScore == 12) {
-                            PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamBName);
+                            // 使用多语言系统
+                            for (int i = 1; i <= MaxClients; i++) {
+                                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                    SetGlobalTransTarget(i);
+                                    PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamBName);
+                                }
+                            }
                         }
                     }
                 }
-                
+
                 if (!g_bDidLiveStarted) {
-                    PrintToChatAll("\x04[%s]:\x03 尚未开始！", MODNAME);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Not Live");
+                        }
+                    }
                 }
             } else if (g_iCurrentHalf > 2) {
                 if (g_iCurrentRound == 0) {
                     g_iCurrentRound = 1;
                 }
-                    
+
                 if (g_iCurrentRound > (g_iCTScoreH1 + g_iTScoreH1 + 1)) {
                     g_iCurrentRound--;
                 }
 
                 if (GetConVarInt(g_hCvarShowScores) == 1) {
-                    PrintToChatAll("\x04[%s]:\x03 回合\x03 %d \x04- 半场进度\x03 %d\x04 /\x03 4\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_iCurrentRound, g_iCurrentHalf, teamAName, g_iCTScore, teamBName, g_iTScore);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Round", g_iCurrentRound, g_iCurrentHalf, 4);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Score", teamAName, g_iCTScore, teamBName, g_iTScore);
+                        }
+                    }
                 }
 
                 if (g_iCTScore == 15) {
-                    PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamAName);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamAName);
+                        }
+                    }
                 }
                 if (g_iTScore == 15) {
-                    PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamBName);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamBName);
+                        }
+                    }
                 }
-                    
+
                 if (!g_bDidLiveStarted) {
-                    PrintToChatAll("\x04[%s]:\x03 尚未开始!", MODNAME);
+                    // 使用多语言系统
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Not Live");
+                        }
+                    }
                 }
             }
-            
-            if ((g_bHasMixStarted) && (g_bDidLiveStarted)) {   
+
+            if ((g_bHasMixStarted) && (g_bDidLiveStarted)) {
                 g_iCurrentRound++;
 
                 if ((g_iCurrentHalf == 1) && (g_iCurrentRound == 13)) {
                     g_bSwapNow = true;
-                    
+
                     if (GetConVarInt(g_hCvarShowSwitchInPanel) == 1) {
                         char titleFormat[32];
                         Format(titleFormat, sizeof(titleFormat), "%s: ", MODNAME);
                         Handle panel = CreatePanel();
                         SetPanelTitle(panel, titleFormat);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
-                        DrawPanelText(panel, " 此回合后，队伍将自动更换 \n 请不要更换你的队伍 ");
+                        char buffer[128];
+                        Format(buffer, sizeof(buffer), "%t", "Teams Will Swap");
+                        DrawPanelText(panel, buffer);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
 
                         SetPanelCurrentKey(panel, 10);
                         DrawPanelItem(panel, "关闭", ITEMDRAW_CONTROL);
-                     
+
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SendPanelToClient(panel, i, Mix_HandleDoNothing, (GetConVarInt(g_hFreezeTime) - 1));
@@ -265,23 +360,31 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 
                         CloseHandle(panel);
                     } else {
-                        PrintToChatAll("\x04[%s]:\x03 此回合后，队伍将自动更换 \n 请不要更换你的队伍 ", MODNAME);
+                        // 使用多语言系统
+                        for (int i = 1; i <= MaxClients; i++) {
+                            if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                SetGlobalTransTarget(i);
+                                PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Will Swap");
+                            }
+                        }
                     }
                 } else if ((g_iCurrentHalf == 3) && (g_iCurrentRound == 4)) {
                     g_bSwapNow = true;
-                    
+
                     if (GetConVarInt(g_hCvarShowSwitchInPanel) == 1) {
                         char titleFormat[32];
                         Format(titleFormat, sizeof(titleFormat), "%s: ", MODNAME);
                         Handle panel = CreatePanel();
                         SetPanelTitle(panel, titleFormat);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
-                        DrawPanelText(panel, " 此回合后，队伍将自动更换 \n 请不要更换你的队伍 ");
+                        char buffer[128];
+                        Format(buffer, sizeof(buffer), "%t", "Teams Will Swap");
+                        DrawPanelText(panel, buffer);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
 
                         SetPanelCurrentKey(panel, 10);
                         DrawPanelItem(panel, "关闭", ITEMDRAW_CONTROL);
-                     
+
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SendPanelToClient(panel, i, Mix_HandleDoNothing, (GetConVarInt(g_hFreezeTime) - 1));
@@ -290,11 +393,17 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 
                         CloseHandle(panel);
                     } else {
-                        PrintToChatAll("\x04[%s]:\x03 此回合后，队伍将自动更换 \n 请不要更换你的队伍 ", MODNAME);
+                        // 使用多语言系统
+                        for (int i = 1; i <= MaxClients; i++) {
+                            if (IsClientInGame(i) && !IsFakeClient(i)) {
+                                SetGlobalTransTarget(i);
+                                PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Will Swap");
+                            }
+                        }
                     }
                 }
             }
-            
+
             if (GetConVarInt(g_hCvarShowMoneyAndWeapons) == 1) {
                 Mix_ShowTeamMoneyAndWeapons();
             }
@@ -310,10 +419,15 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
 {
     int winningTeam = GetEventInt(event, "winner");
 
+    // 调用API事件
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_API_OnRoundEnd(winningTeam, g_iCTScore, g_iTScore);
+    }
+
     if (g_bIsKo3Running) {
         if ((winningTeam == 2) || (winningTeam == 3)) {
             g_bIsKo3Running = false;
-            
+
             if (GetConVarInt(g_hCvarKnifeWinTeamVote) == 1) {
                 Handle teamVoteMenu = CreateMenu(Mix_HandleTeamsVoteMenu, MenuAction_VoteEnd | MenuAction_End | MenuAction_VoteCancel);
                 SetMenuTitle(teamVoteMenu, "是否切换队伍?");
@@ -321,7 +435,8 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                 AddMenuItem(teamVoteMenu, "no", "否");
                 SetMenuExitButton(teamVoteMenu, false);
                 VoteMenuToTeam(teamVoteMenu, winningTeam, 20);
-                
+
+                // 没有对应的翻译短语
                 if (winningTeam == 2) {
                     PrintToChatAll("\x04[%s]:\x03 进攻方队伍赢得了刀局 - 正在进行队伍选择投票...", MODNAME);
                 } else if (winningTeam == 3) {
@@ -341,11 +456,11 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             g_iCTScoreH1++;
             g_iCTScore++;
         }
-        
+
         if (g_bSwapNow) {
             g_iCTScoreH1 = g_iCTScore;
             g_iTScoreH1 = g_iTScore;
-            
+
             float time = GetConVarFloat(g_hCvarDelayBeforeSwapping);
             if (time < 0.1) {
                 time = 0.1;
@@ -354,26 +469,42 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             g_bSwapNow = false;
             g_iCurrentRound = 1;
             g_iCurrentHalf++;
-            
+
             int temp = g_iCTScoreH1;
             g_iCTScoreH1 = g_iTScoreH1;
             g_iTScoreH1 = temp;
-            
+
             if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
                 g_bDidLiveStarted = false;
             }
-            
+
             if (GetConVarInt(g_hCvarPlayTeamSwapedSound) == 1) {
                 EmitSoundToAll("ambient/misc/brass_bell_C.wav");
             }
-            
+
+            // 调用API事件
+            Mix_API_OnHalfTime(g_iCTScore, g_iTScore);
+
             if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) {
-                PrintToChatAll("\x04[%s]:\x03 队伍互换完成! \x01- \x03输入\x04 !live \x03开始第二局.", MODNAME);
+                // 使用多语言系统
+                for (int i = 1; i <= MaxClients; i++) {
+                    if (IsClientInGame(i) && !IsFakeClient(i)) {
+                        SetGlobalTransTarget(i);
+                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Type Live");
+                    }
+                }
             } else {
-                PrintToChatAll("\x04[%s]:\x03 队伍互换完成!", MODNAME);
+                // 使用多语言系统
+                for (int i = 1; i <= MaxClients; i++) {
+                    if (IsClientInGame(i) && !IsFakeClient(i)) {
+                        SetGlobalTransTarget(i);
+                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                    }
+                }
             }
         }
-        
+
         // 如果是MR3，检查比赛结束
         if ((g_iCurrentHalf > 2) && ((g_iCTScore - g_iCTScore2 >= 4) || (g_iTScore - g_iTScore2 >= 4) || ((g_iCTScore - g_iCTScore2 == 3) && (g_iTScore - g_iTScore2 == 3)))) {
             if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
@@ -393,10 +524,10 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                     CreateTimer(3.0, Mix_InformMatchEnd, 1);
                 }
             }
-            
+
             g_bHasMixStarted = false;
             g_bDidLiveStarted = false;
-            
+
             g_bIsItManual = true;
             if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
                 g_bAllowReady = true;
@@ -408,18 +539,18 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                     g_iReadyPlayersData[i] = -1;
                 }
             }
-    
+
             g_iCurrentRound = 1;
             g_iCurrentHalf = 1;
             g_iTScore = -1;
             g_iCTScore = -1;
-            
+
             g_bSaveClientsScore = false;
-    
+
             SetConVarString(g_hHostName, g_szHostName);
-    
+
             Mix_ExecutePracConfig(0);
-            
+
             if (GetConVarInt(g_hCvarRemovePassWhenMixIsEnded) == 1) {
                 Mix_RemovePassword(0);
             }
@@ -434,7 +565,14 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
  */
 public Action Mix_Event_BombExploded(Handle event, const char[] name, bool dontBroadcast)
 {
-    // 处理爆炸事件，如果需要
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
+
+    // 更新统计系统
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_Stats_OnBombPlanted(client);
+    }
+
     return Plugin_Continue;
 }
 
@@ -443,7 +581,14 @@ public Action Mix_Event_BombExploded(Handle event, const char[] name, bool dontB
  */
 public Action Mix_Event_BombDefused(Handle event, const char[] name, bool dontBroadcast)
 {
-    // 处理拆弹事件，如果需要
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
+
+    // 更新统计系统
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_Stats_OnBombDefused(client);
+    }
+
     return Plugin_Continue;
 }
 
@@ -452,29 +597,40 @@ public Action Mix_Event_BombDefused(Handle event, const char[] name, bool dontBr
  */
 public Action Mix_Event_PlayerHurt(Handle event, const char[] name, bool dontBroadcast)
 {
+    int userid = GetEventInt(event, "userid");
+    int attacker = GetEventInt(event, "attacker");
+    int damage = GetEventInt(event, "dmg_health");
+    bool headshot = GetEventBool(event, "hitgroup") == 1;
+
+    int victimId = GetClientOfUserId(userid);
+    int attackerId = GetClientOfUserId(attacker);
+
+    // 只有在比赛正式开始后才更新统计数据
     if (g_bHasMixStarted && g_bDidLiveStarted) {
-        if (GetConVarInt(g_hCvarShowTkMessage) == 1) {
-            int userid = GetEventInt(event, "userid");
-            int attacker = GetEventInt(event, "attacker");
-            int damage = GetEventInt(event, "dmg_health");
-            
-            int victimId = GetClientOfUserId(userid);
-            int attackerId = GetClientOfUserId(attacker);
-            
-            // 检查是否是队友伤害
-            if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
-                if (GetClientTeam(victimId) == GetClientTeam(attackerId)) {
-                    char attackerName[MAX_NAME_LENGTH];
-                    char victimName[MAX_NAME_LENGTH];
-                    GetClientName(attackerId, attackerName, sizeof(attackerName));
-                    GetClientName(victimId, victimName, sizeof(victimName));
-                    
-                    PrintToChatAll("\x04[%s]:\x03 友伤! \x04%s \x03对 \x04%s \x03造成了 \x04%d \x03点伤害", MODNAME, attackerName, victimName, damage);
+        Mix_Stats_OnPlayerHurt(attackerId, victimId, damage, headshot);
+    }
+
+    // 显示队友伤害消息
+    if (GetConVarInt(g_hCvarShowTkMessage) == 1) {
+        // 检查是否是队友伤害
+        if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
+            if (GetClientTeam(victimId) == GetClientTeam(attackerId)) {
+                char attackerName[MAX_NAME_LENGTH];
+                char victimName[MAX_NAME_LENGTH];
+                GetClientName(attackerId, attackerName, sizeof(attackerName));
+                GetClientName(victimId, victimName, sizeof(victimName));
+
+                // 使用多语言系统
+                for (int i = 1; i <= MaxClients; i++) {
+                    if (IsClientInGame(i) && !IsFakeClient(i)) {
+                        SetGlobalTransTarget(i);
+                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Team Damage", attackerName, victimName, damage);
+                    }
                 }
             }
         }
     }
-    
+
     return Plugin_Continue;
 }
 
@@ -483,25 +639,29 @@ public Action Mix_Event_PlayerHurt(Handle event, const char[] name, bool dontBro
  */
 public Action Mix_Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcast)
 {
+    int userid = GetEventInt(event, "userid");
+    int attacker = GetEventInt(event, "attacker");
+    bool headshot = GetEventBool(event, "headshot");
+
+    int victimId = GetClientOfUserId(userid);
+    int attackerId = GetClientOfUserId(attacker);
+
+    // 只有在比赛正式开始后才更新统计数据
     if (g_bHasMixStarted && g_bDidLiveStarted) {
-        int userid = GetEventInt(event, "userid");
-        int attacker = GetEventInt(event, "attacker");
-        
-        int victimId = GetClientOfUserId(userid);
-        int attackerId = GetClientOfUserId(attacker);
-        
-        if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
-            if (GetClientTeam(victimId) != GetClientTeam(attackerId)) {
-                if (GetConVarInt(g_hCvarShowMVP) == 1) {
-                    // 增加击杀数
-                    g_iScoresOfTheRound[attackerId]++;
-                    g_iScoresOfTheGame[attackerId]++;
-                    g_iDeathsOfTheGame[victimId]++;
-                }
+        Mix_Stats_OnPlayerDeath(attackerId, victimId, headshot);
+    }
+
+    if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
+        if (GetClientTeam(victimId) != GetClientTeam(attackerId)) {
+            if (GetConVarInt(g_hCvarShowMVP) == 1) {
+                // 增加击杀数（保留原有功能）
+                g_iScoresOfTheRound[attackerId]++;
+                g_iScoresOfTheGame[attackerId]++;
+                g_iDeathsOfTheGame[victimId]++;
             }
         }
     }
-    
+
     return Plugin_Continue;
 }
 
@@ -511,17 +671,49 @@ public Action Mix_Event_PlayerDeath(Handle event, const char[] name, bool dontBr
 public Action Mix_Event_PlayerDisconnect(Handle event, const char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId(GetEventInt(event, "userid"));
-    
+
     // 更新准备系统
     if (g_bReadyPlayers[client]) {
         g_bReadyPlayers[client] = false;
         g_iReadyCount--;
     }
-    
+
     g_bHidePanel[client] = false;
     g_bGaggedPlayers[client] = false;
     g_bMutedPlayers[client] = false;
-    
+
+    return Plugin_Continue;
+}
+
+/**
+ * 武器开火事件
+ */
+public Action Mix_Event_WeaponFire(Handle event, const char[] name, bool dontBroadcast)
+{
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
+
+    // 只有在比赛正式开始后才更新统计数据
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_Stats_OnWeaponFire(client);
+    }
+
+    return Plugin_Continue;
+}
+
+/**
+ * 炸弹安装事件
+ */
+public Action Mix_Event_BombPlanted(Handle event, const char[] name, bool dontBroadcast)
+{
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
+
+    // 只有在比赛正式开始后才更新统计数据
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        Mix_Stats_OnBombPlanted(client);
+    }
+
     return Plugin_Continue;
 }
 
@@ -551,7 +743,7 @@ void Mix_HudUpdate()
         KillTimer(g_hHudTimer);
         g_hHudTimer = INVALID_HANDLE;
     }
-    
+
     g_hHudTimer = CreateTimer(1.0, Mix_HudTimer, _, TIMER_REPEAT);
 }
 
@@ -563,7 +755,7 @@ public Action Mix_HudTimer(Handle timer)
     if (!g_bHasMixStarted) {
         Mix_CreateReadyPanel();
     }
-    
+
     return Plugin_Continue;
 }
 
@@ -573,9 +765,12 @@ public Action Mix_HudTimer(Handle timer)
 public Action Mix_InformPlayerAboutTheMix(Handle timer, int client)
 {
     if (IsClientInGame(client) && !IsFakeClient(client)) {
-        PrintToChat(client, "\x04[%s]:\x03 比赛已在进行中! 请不要干扰游戏!", MODNAME);
+        // 这里使用硬编码的消息，因为没有对应的翻译短语
+        // 可以在翻译文件中添加"Match In Progress Do Not Disturb"短语
+        SetGlobalTransTarget(client);
+        PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Match In Progress");
     }
-    
+
     return Plugin_Continue;
 }
 
@@ -587,16 +782,16 @@ bool Mix_RemoveProps()
     if (g_bIsMapValidToRemoveProps) {
         int entity = -1;
         int removed = 0;
-        
+
         // 移除鸡、可打碎物体和屏幕等
         char classList[][] = {
-            "chicken", 
-            "func_breakable", 
-            "prop_dynamic", 
-            "prop_physics", 
+            "chicken",
+            "func_breakable",
+            "prop_dynamic",
+            "prop_physics",
             "prop_physics_multiplayer"
         };
-        
+
         for (int i = 0; i < sizeof(classList); i++) {
             while ((entity = FindEntityByClassname(entity, classList[i])) != -1) {
                 AcceptEntityInput(entity, "Kill");
@@ -604,12 +799,14 @@ bool Mix_RemoveProps()
             }
             entity = -1;
         }
-        
+
         if (removed > 0) {
+            // 这里使用硬编码的消息，因为没有对应的翻译短语
+            // 可以在翻译文件中添加"Props Removed"短语
             PrintToChatAll("\x04[%s]:\x03 已移除 %d 个物品", MODNAME, removed);
             return true;
         }
     }
-    
+
     return false;
-} 
+}
