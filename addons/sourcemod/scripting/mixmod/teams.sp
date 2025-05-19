@@ -10,8 +10,6 @@
 #endif
 #define _mixmod_teams_included
 
-// 注意：团队常量现在统一在 constants.sp 中定义，这里不再重复定义
-
 // =============================================================================
 // 团队管理功能
 // =============================================================================
@@ -58,6 +56,9 @@ public Action Mix_SwapTimer(Handle timer)
 {
     g_bDidLiveStarted = false; // 在交换队伍前禁用Live状态
 
+    // 输出调试信息
+    PrintToChatAll("\x04[%s]:\x03 交换队伍前分数: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
+
     int team;
     for (int client = 1; client <= MaxClients; client++) {
         if (IsClientInGame(client) && !IsFakeClient(client) && IsClientConnected(client)) {
@@ -70,8 +71,21 @@ public Action Mix_SwapTimer(Handle timer)
                 CS_SwitchTeam(client, CS_TEAM_CT);
                 // 不再设置模型，因为现在换边不需要选择模型
             }
+
+            // 重置玩家金钱为800
+            if (team > 1 && g_iAccount != -1) {
+                SetEntProp(client, Prop_Send, "m_iAccount", 800);
+            }
         }
     }
+
+    // 确保分数已正确交换
+    PrintToChatAll("\x04[%s]:\x03 交换队伍后分数: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
+
+    // 更新游戏记分板上的分数
+    SetTeamScore(3, g_iCTScore);
+    SetTeamScore(2, g_iTScore);
+    PrintToChatAll("\x04[%s]:\x03 记分板已更新", MODNAME);
 
     if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 1) {
         g_bDidLiveStarted = true;
@@ -251,6 +265,9 @@ public int Mix_HandleTeamsVoteMenu(Handle menu, MenuAction action, int param1, i
         CloseHandle(menu);
     } else if (action == MenuAction_VoteEnd) {
         if (param1 == 0) {  // 投票选择"是"
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 刀局后交换队伍，分数将重置", MODNAME);
+
             int team;
             for (int i = 1; i <= MaxClients; i++) {
                 if (IsClientInGame(i)) {
@@ -265,6 +282,28 @@ public int Mix_HandleTeamsVoteMenu(Handle menu, MenuAction action, int param1, i
         }
         g_bIsKo3Running = false;
         PrintToChatAll("\x04[%s]:\x03 队伍已选择!", MODNAME);
+
+        // 重置分数
+        g_iCTScore = 0;
+        g_iTScore = 0;
+        g_iCTScoreH1 = 0;
+        g_iTScoreH1 = 0;
+
+        // 重置所有玩家的战绩和统计数据
+        Mix_ResetAllStats();
+
+        // 重置MVP系统的分数
+        for (int i = 1; i <= MaxClients; i++) {
+            g_iScoresOfTheRound[i] = 0;
+            g_iScoresOfTheGame[i] = 0;
+            g_iDeathsOfTheGame[i] = 0;
+        }
+
+        // 更新游戏记分板上的分数
+        SetTeamScore(3, g_iCTScore);
+        SetTeamScore(2, g_iTScore);
+        PrintToChatAll("\x04[%s]:\x03 分数和所有玩家的战绩已重置", MODNAME);
+
         Mix_ExecuteMr12Config(0);
     }
     return 0;

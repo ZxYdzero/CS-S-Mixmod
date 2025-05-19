@@ -9,7 +9,7 @@
 
 /**
  * 显示当前比分
- * 
+ *
  * @param client 显示比分的目标客户端
  */
 void Mix_ShowScores(int client)
@@ -19,15 +19,15 @@ void Mix_ShowScores(int client)
             PrintToChat(client, "\x04[%s]:\x03 比赛尚未开始...", MODNAME);
             return;
         }
-        
+
         char teamAName[33];
         char teamBName[33];
         GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
         GetConVarString(g_hCvarCusomNameTeamT, teamBName, sizeof(teamBName));
-        
+
         if (g_iCurrentHalf == 1) {
             PrintToChat(client, "\x04[%s]:\x03 回合\x03 %d \x04- 半场\x03 %d\x04 /\x03 2\x04 - %s\x03 %d,\x04 %s\x03 %d\x04.", MODNAME, g_iCurrentRound, g_iCurrentHalf, teamAName, g_iCTScoreH1, teamBName, g_iTScoreH1);
-            
+
             if (!g_bDidLiveStarted)
                 PrintToChat(client, "\x04[%s]:\x03 尚未启动!", MODNAME);
         } else if (g_iCurrentHalf == 2) {
@@ -50,7 +50,7 @@ void Mix_ShowScores(int client)
                 if (g_iTScore == 15)
                     PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamBName);
             }
-                
+
             if (!g_bDidLiveStarted)
                 PrintToChat(client, "\x04[%s]:\x03 尚未启动!", MODNAME);
         } else if (g_iCurrentHalf > 2) {
@@ -60,7 +60,7 @@ void Mix_ShowScores(int client)
                 PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamAName);
             if (g_iTScore == 18)
                 PrintToChatAll("\x04[%s]:\x03 赛点 \x04for\x03 %s", MODNAME, teamBName);
-                
+
             if (!g_bDidLiveStarted)
                 PrintToChat(client, "\x04[%s]:\x03 尚未启动!", MODNAME);
         }
@@ -75,7 +75,7 @@ void Mix_ShowTeamMoneyAndWeapons()
     if (g_bHasMixStarted && g_iAccount != -1) {
         int show = GetConVarInt(g_hCvarShowCashInPanel);
         bool wasMaxed[MAXPLAYERS + 1] = {false, ...};
-        
+
         if (show == 0) {  // 在聊天框中显示
             char name[MAX_NAME_LENGTH], msg[150];
             int team, money, i, max = 0, pos = -1;
@@ -208,7 +208,7 @@ void Mix_ShowTeamMoneyAndWeapons()
 
 /**
  * 向特定队伍的所有成员发送消息
- * 
+ *
  * @param team 目标队伍
  * @param message 要发送的消息
  */
@@ -223,7 +223,7 @@ void Mix_PrintToTeamChat(int team, const char[] message)
 
 /**
  * 创建获胜队伍面板
- * 
+ *
  * @param team 获胜队伍，1=平局，2=T获胜，3=CT获胜
  */
 void Mix_CreateWinningTeamPanel(int team)
@@ -231,39 +231,45 @@ void Mix_CreateWinningTeamPanel(int team)
     if (g_hWinTeamPanel != INVALID_HANDLE) {
         CloseHandle(g_hWinTeamPanel);
     }
-    
+
+    // 输出调试信息
+    PrintToChatAll("\x04[%s]:\x03 Mix_CreateWinningTeamPanel被调用，胜利队伍=%d", MODNAME, team);
+
     char teamAName[32];
     char teamBName[32];
     GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
     GetConVarString(g_hCvarCusomNameTeamT, teamBName, sizeof(teamBName));
-    
+
     char titleFormat[32];
     char teamNameFormat[150];
     Format(titleFormat, sizeof(titleFormat), "%s - 获胜队伍\n -", MODNAME);
-    
+
     g_hWinTeamPanel = CreatePanel();
     SetPanelTitle(g_hWinTeamPanel, titleFormat);
     DrawPanelItem(g_hWinTeamPanel, "", ITEMDRAW_SPACER);
-    
+
     if (team == 3)
         Format(teamNameFormat, sizeof(teamNameFormat), "--------------\n比赛结束\n\n *** 获胜者是 ***\n  -* %s *- \n------------", teamAName);
     else if (team == 2)
         Format(teamNameFormat, sizeof(teamNameFormat), "--------------\n比赛结束\n\n *** 获胜者是 ***\n  -* %s *- \n------------", teamBName);
     else if (team == 1)
         Format(teamNameFormat, sizeof(teamNameFormat), "--------------\n比赛结束\n\n *** 平局 ***\n \n------------");
-    
+
     DrawPanelText(g_hWinTeamPanel, teamNameFormat);
     DrawPanelItem(g_hWinTeamPanel, "", ITEMDRAW_SPACER);
 
     SetPanelCurrentKey(g_hWinTeamPanel, 10);
     DrawPanelItem(g_hWinTeamPanel, "关闭", ITEMDRAW_CONTROL);
-    
+
     for (int i = 1; i <= MaxClients; i++) {
         if(IsClientInGame(i) && !IsFakeClient(i)) {
             SendPanelToClient(g_hWinTeamPanel, i, Mix_HandleDoNothing, 30);
         }
     }
-    
+
+    // 调用API事件
+    Mix_API_OnMixEnd(team, g_iCTScore, g_iTScore);
+
     CreateTimer(2.0, Mix_DisplayScores);
 }
 
@@ -274,7 +280,7 @@ public Action Mix_DisplayScores(Handle timer)
 {
     int max = 0;
     int winner = -1;
-    
+
     for (int i = 1; i <= MaxClients; i++) {
         if (IsClientConnected(i)) {
             if (g_iScoresOfTheGame[i] >= max) {
@@ -283,28 +289,28 @@ public Action Mix_DisplayScores(Handle timer)
             }
         }
     }
-    
+
     if (winner < 1) {
         PrintToChatAll("\x04[%s]:\x03 尝试查找MVP玩家时出错...", MODNAME);
         return Plugin_Continue;
     }
-    
+
     char winnerName[33];
     GetClientName(winner, winnerName, sizeof(winnerName));
     int kills = g_iScoresOfTheGame[winner];
-    
+
     PrintToChatAll("\x04[%s]:\x03 击杀统计:", MODNAME);
     PrintToChatAll("------------------");
     PrintToChatAll("\x03 - \x01MVP:\x04 %s , \x03击杀数:\x04 %d \x03!", winnerName, kills);
-    
+
     Mix_StopRecord(0, 0);  // 停止录制
-    
+
     return Plugin_Continue;
 }
 
 /**
  * 显示玩家MVP信息
- * 
+ *
  * @param client 目标客户端
  */
 void Mix_ShowMVP(int client)
@@ -314,15 +320,15 @@ void Mix_ShowMVP(int client)
             PrintToChat(client, "\x04[%s]:\x03 比赛尚未开始", MODNAME);
             return;
         }
-        
+
         if (GetConVarInt(g_hCvarShowMVP) == 0) {
             PrintToChat(client, "\x04[%s]:\x03 MVP数据显示已禁用", MODNAME);
             return;
         }
-        
+
         int max = 0;
         int index = -1;
-        
+
         for (int i = 1; i <= MaxClients; i++) {
             if (IsClientConnected(i)) {
                 if (g_iScoresOfTheGame[i] >= max) {
@@ -331,23 +337,23 @@ void Mix_ShowMVP(int client)
                 }
             }
         }
-        
+
         char mvpName[33];
         GetClientName(index, mvpName, sizeof(mvpName));
         int kills = g_iScoresOfTheGame[index];
-        
+
         if (kills <= 0) {
             PrintToChat(client, "\x04[%s]:\x03 MVP尚未产生，请稍候", MODNAME);
             return;
         }
-        
+
         PrintToChat(client, "\x04[%s]:\x03 MVP:", MODNAME);
         PrintToChat(client, "------------------");
         PrintToChat(client, "\x03 - \x01MVP:\x04 %s , 击杀数:\x04 %d 个敌人！", mvpName, kills);
-        
+
         if (index == client)
             return;
-        
+
         char clientName[33];
         GetClientName(client, clientName, sizeof(clientName));
         PrintToChat(client, "\x03 你击杀了 \x04 %d \x03 个敌人", g_iScoresOfTheGame[client]);
@@ -356,7 +362,7 @@ void Mix_ShowMVP(int client)
 
 /**
  * 创建比赛结束时的信息提示
- * 
+ *
  * @param timer 定时器句柄
  * @param team  胜利的队伍
  */
@@ -366,24 +372,30 @@ public Action Mix_InformMatchEnd(Handle timer, int team)
     char teamBName[32];
     GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
     GetConVarString(g_hCvarCusomNameTeamT, teamBName, sizeof(teamBName));
-    
+
+    // 输出调试信息
+    PrintToChatAll("\x04[%s]:\x03 Mix_InformMatchEnd被调用，胜利队伍=%d", MODNAME, team);
+
     PrintToChatAll("\x04--- Mix-Plugin created by iDragon ---");
     PrintToChatAll("\x04[%s]:\x03 比赛结束", MODNAME);
-    
+
     if (team == 3)
         PrintToChatAll("\x04[%s]: \x03获胜者是:\x04 %s", MODNAME, teamAName);
     else if (team == 2)
         PrintToChatAll("\x04[%s]: \x03获胜者是:\x04 %s", MODNAME, teamBName);
     else if (team == 1)
         PrintToChatAll("\x04[%s]: \x03平局.\x04 |IT'S A DRAW!", MODNAME);
-        
+
+    // 调用API事件
+    Mix_API_OnMixEnd(team, g_iCTScore, g_iTScore);
+
     CreateTimer(2.0, Mix_DisplayScores);
-    
+
     if (g_bIsBuyZoneDisabled) {
         if (Mix_EnableBuyZone()) {
             g_bIsBuyZoneDisabled = false;
         }
     }
-    
+
     return Plugin_Continue;
 }

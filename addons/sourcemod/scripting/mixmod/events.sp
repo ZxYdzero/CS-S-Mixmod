@@ -117,6 +117,9 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                     g_iCurrentRound--;
                 }
 
+                // 输出调试信息
+                PrintToChatAll("\x04[%s]:\x03 第一半场 - 回合: %d, CT分数: %d, T分数: %d", MODNAME, g_iCurrentRound, g_iCTScoreH1, g_iTScoreH1);
+
                 if (GetConVarInt(g_hCvarShowScores) == 1) {
                     // 使用多语言系统
                     for (int i = 1; i <= MaxClients; i++) {
@@ -143,8 +146,14 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                     g_iCurrentRound = 1;
                 }
 
+                // 输出调试信息
+                PrintToChatAll("\x04[%s]:\x03 第二半场 - 回合: %d, CT总分: %d, T总分: %d", MODNAME, g_iCurrentRound, g_iCTScore, g_iTScore);
+
                 // 检查比赛是否结束
                 if ((g_iCTScore == 13) || (g_iTScore == 13) || ((g_iCTScore == 12) && (g_iTScore == 12) && (GetConVarInt(g_hCvarMr3Enabled) == 0))) {
+                    // 输出调试信息
+                    PrintToChatAll("\x04[%s]:\x03 比赛结束条件触发: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
+
                     if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
                         if (g_iCTScore == 13) {
                             Mix_CreateWinningTeamPanel(3);
@@ -162,6 +171,9 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                             CreateTimer(3.0, Mix_InformMatchEnd, 1);
                         }
                     }
+
+                    // 输出调试信息
+                    PrintToChatAll("\x04[%s]:\x03 正在重置比赛状态...", MODNAME);
 
                     g_bHasMixStarted = false;
                     g_bDidLiveStarted = false;
@@ -452,9 +464,17 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
         if (winningTeam == 2) { // T Win
             g_iTScoreH1++;
             g_iTScore++;
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 T队得分更新: %d", MODNAME, g_iTScore);
+            // 更新游戏记分板
+            SetTeamScore(2, g_iTScore);
         } else if (winningTeam == 3) { // CT Win
             g_iCTScoreH1++;
             g_iCTScore++;
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 CT队得分更新: %d", MODNAME, g_iCTScore);
+            // 更新游戏记分板
+            SetTeamScore(3, g_iCTScore);
         }
 
         if (g_bSwapNow) {
@@ -470,9 +490,18 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             g_iCurrentRound = 1;
             g_iCurrentHalf++;
 
+            // 交换半场分数
             int temp = g_iCTScoreH1;
             g_iCTScoreH1 = g_iTScoreH1;
             g_iTScoreH1 = temp;
+
+            // 交换总分数
+            temp = g_iCTScore;
+            g_iCTScore = g_iTScore;
+            g_iTScore = temp;
+
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 队伍交换后分数更新: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
 
             if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
                 g_bDidLiveStarted = false;
@@ -507,6 +536,9 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
 
         // 如果是MR3，检查比赛结束
         if ((g_iCurrentHalf > 2) && ((g_iCTScore - g_iCTScore2 >= 4) || (g_iTScore - g_iTScore2 >= 4) || ((g_iCTScore - g_iCTScore2 == 3) && (g_iTScore - g_iTScore2 == 3)))) {
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 MR3比赛结束条件触发: CT=%d (原始=%d), T=%d (原始=%d)", MODNAME, g_iCTScore, g_iCTScore2, g_iTScore, g_iTScore2);
+
             if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
                 if (g_iCTScore >= 16) {
                     Mix_CreateWinningTeamPanel(3);
@@ -524,6 +556,9 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                     CreateTimer(3.0, Mix_InformMatchEnd, 1);
                 }
             }
+
+            // 输出调试信息
+            PrintToChatAll("\x04[%s]:\x03 MR3模式下正在重置比赛状态...", MODNAME);
 
             g_bHasMixStarted = false;
             g_bDidLiveStarted = false;
@@ -600,7 +635,7 @@ public Action Mix_Event_PlayerHurt(Handle event, const char[] name, bool dontBro
     int userid = GetEventInt(event, "userid");
     int attacker = GetEventInt(event, "attacker");
     int damage = GetEventInt(event, "dmg_health");
-    bool headshot = GetEventBool(event, "hitgroup") == 1;
+    bool headshot = GetEventBool(event, "hitgroup") == true;
 
     int victimId = GetClientOfUserId(userid);
     int attackerId = GetClientOfUserId(attacker);

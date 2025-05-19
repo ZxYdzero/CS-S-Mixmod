@@ -188,6 +188,12 @@ bool g_bIsKicked = false;
 Handle g_hHudTimer = INVALID_HANDLE;
 bool g_bHidePanel[MAXPLAYERS+1] = {false, ...};
 
+// =============================================================================
+// 残局相关
+// =============================================================================
+bool g_bInClutchSituation[MAXPLAYERS+1] = {false, ...};
+int g_iClutchEnemyCount[MAXPLAYERS+1] = {0, ...};
+
 /**
  * 重置比赛参数和玩家状态
  *
@@ -251,6 +257,8 @@ void Mix_ResetMatchState()
         g_bMutedPlayers[i] = false;
         g_bGaggedPlayers[i] = false;
         g_bHidePanel[i] = false;
+        g_bInClutchSituation[i] = false;
+        g_iClutchEnemyCount[i] = 0;
     }
 
     // 重置统计数据

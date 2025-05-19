@@ -134,7 +134,7 @@ public int Mix_HandleMixMenu(Handle menu, MenuAction action, int param1, int par
             if (g_hMapListMenu != INVALID_HANDLE) {
                 DisplayMenu(g_hMapListMenu, param1, MENU_TIME_FOREVER);
             } else {
-                
+
                 PrintToChat(param1, "\x04[%s]:\x03 无法显示地图列表，请联系管理员", MODNAME);
             }
         } else if (StrEqual(option, "restart")) {
@@ -145,7 +145,7 @@ public int Mix_HandleMixMenu(Handle menu, MenuAction action, int param1, int par
             if (g_hAdminMenu != INVALID_HANDLE) {
                 DisplayMenu(g_hAdminMenu, param1, MENU_TIME_FOREVER);
             } else {
-                
+
                 PrintToChat(param1, "\x04[%s]:\x03 管理员菜单不可用", MODNAME);
             }
         } else if (StrEqual(option, "record")) {
@@ -209,7 +209,7 @@ void Mix_HandlePasswordCommand(int client, const char[] command)
 
         DisplayMenu(menu, client, MENU_TIME_FOREVER);
     } else {
-        
+
         PrintToChat(client, "\x04[%s]:\x03 密码命令已禁用", MODNAME);
     }
 }
@@ -236,7 +236,7 @@ public int Mix_HandlePasswordMenu(Handle menu, MenuAction action, int param1, in
         if (strlen(password) >= 4) {
             // 密码长度足够，设置密码
             SetConVarString(g_hPassword, password);
-            
+
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03已设置服务器密码", MODNAME, name);
             CloseHandle(menu);
         } else {
@@ -291,18 +291,18 @@ void Mix_SetRandomPassword(int client)
 
         if (GetConVarInt(g_hCvarRpwShowPass) == 1) {
             // 向所有人显示密码
-            
+
             PrintToChatAll("\x04[%s]:\x03 服务器密码设置为: \x04%s", MODNAME, password);
         } else {
             // 只向管理员显示密码
             if (client != 0) {
                 char name[MAX_NAME_LENGTH];
                 GetClientName(client, name, sizeof(name));
-                
+
                 PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03设置了随机密码", MODNAME, name);
                 PrintToChat(client, "\x04[%s]:\x03 服务器密码设置为: \x04%s", MODNAME, password);
             } else {
-                
+
                 PrintToChatAll("\x04[%s]:\x03 服务器密码已随机设置", MODNAME);
                 PrintToServer("[%s]: 服务器密码设置为: %s", MODNAME, password);
             }
@@ -311,7 +311,7 @@ void Mix_SetRandomPassword(int client)
             for (int i = 1; i <= MaxClients; i++) {
                 if (i != client && IsClientInGame(i) && !IsFakeClient(i)) {
                     if (CheckCommandAccess(i, "sm_password", ADMFLAG_KICK, false)) {
-                        
+
                         PrintToChat(i, "\x04[%s]:\x03 服务器密码设置为: \x04%s", MODNAME, password);
                     }
                 }
@@ -319,7 +319,7 @@ void Mix_SetRandomPassword(int client)
         }
     } else {
         if (client != 0) {
-            
+
             PrintToChat(client, "\x04[%s]:\x03 密码命令已禁用", MODNAME);
         } else {
             PrintToServer("[%s]: 密码命令已禁用", MODNAME);
@@ -339,15 +339,15 @@ void Mix_RemovePassword(int client)
         if (client != 0) {
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
-            
+
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03移除了服务器密码", MODNAME, name);
         } else {
-            
+
             PrintToChatAll("\x04[%s]:\x03 服务器密码已移除", MODNAME);
         }
     } else {
         if (client != 0) {
-            
+
             PrintToChat(client, "\x04[%s]:\x03 密码命令已禁用", MODNAME);
         } else {
             PrintToServer("[%s]: 密码命令已禁用", MODNAME);
@@ -361,6 +361,16 @@ void Mix_RemovePassword(int client)
 void Mix_StartLive(int client)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
+        // 重置所有玩家的战绩和统计数据
+        Mix_ResetAllStats();
+
+        // 重置MVP系统的分数
+        for (int i = 1; i <= MaxClients; i++) {
+            g_iScoresOfTheRound[i] = 0;
+            g_iScoresOfTheGame[i] = 0;
+            g_iDeathsOfTheGame[i] = 0;
+        }
+
         // 首先执行mr12配置，确保配置正确加载
         Mix_ExecuteMr12Config(client);
 
@@ -417,11 +427,11 @@ void Mix_RestartRound(int client)
         if (GetConVarInt(g_hCvarEnableRRCommand) == 1) {
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
-            
+
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03重启了回合", MODNAME, name);
             SetConVarInt(g_hRestartGame, 1);
         } else {
-            
+
             PrintToChat(client, "\x04[%s]:\x03 重启回合命令已禁用", MODNAME);
         }
     }
@@ -453,10 +463,10 @@ void Mix_StartKnifeRound(int client)
 
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
-            
+
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03开始了刀局", MODNAME, name);
         } else {
-            
+
             PrintToChat(client, "\x04[%s]:\x03 刀局功能已禁用", MODNAME);
         }
     }

@@ -165,10 +165,25 @@ public Action Mix_ChangeMap(Handle timer, int client)
 void Mix_ExecuteMr12Config(int client)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
+        // 重置所有玩家的战绩和统计数据
+        Mix_ResetAllStats();
+
+        // 重置MVP系统的分数
+        for (int i = 1; i <= MaxClients; i++) {
+            g_iScoresOfTheRound[i] = 0;
+            g_iScoresOfTheGame[i] = 0;
+            g_iDeathsOfTheGame[i] = 0;
+        }
+
+        // 重置记分板上的分数
+        SetTeamScore(3, 0);
+        SetTeamScore(2, 0);
+
         char customCfg[32];
         GetConVarString(g_hCvarCustomLiveCfg, customCfg, sizeof(customCfg));
 
         PrintToChatAll("\x04[%s]:\x03 正在执行 \x04%s \x03...", MODNAME, customCfg);
+        PrintToChatAll("\x04[%s]:\x03 所有玩家的战绩和分数已重置", MODNAME);
 
         ServerCommand("exec %s", customCfg);
         Mix_StartRecord(client);

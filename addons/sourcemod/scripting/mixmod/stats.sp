@@ -180,6 +180,10 @@ void Mix_Stats_OnRoundStart()
         for (int j = 1; j <= MaxClients; j++) {
             g_RoundDamage[i][j] = 0;
         }
+
+        // 重置残局状态
+        g_bInClutchSituation[i] = false;
+        g_iClutchEnemyCount[i] = 0;
     }
 
     // 增加参与回合数
@@ -211,6 +215,11 @@ void Mix_Stats_OnPlayerHurt(int attacker, int victim, int damage, bool headshot)
     // 记录伤害
     g_PlayerStats[attacker].damage += damage;
     g_RoundDamage[attacker][victim] += damage;
+
+    // 记录爆头
+    if (damage >= 100 && headshot) {
+        g_PlayerStats[attacker].headshots ++;
+    }
 
     // 记录命中
     g_PlayerStats[attacker].shots_hit++;
@@ -256,6 +265,8 @@ void Mix_Stats_OnPlayerDeath(int attacker, int victim, bool headshot)
     g_PlayerStats[victim].deaths++;
 
     if (!IsValidClient(attacker) || attacker == victim) {
+        // 即使是自杀或无效击杀，也需要检查残局情况
+        CheckClutchSituation();
         return;
     }
 
@@ -276,8 +287,65 @@ void Mix_Stats_OnPlayerDeath(int attacker, int victim, bool headshot)
         }
     }
 
-    // 检查残局
+    // 检查是否有玩家进入残局情况
+    CheckClutchSituation();
+
+    // 检查是否有玩家赢得残局
     CheckClutch(attacker);
+}
+
+// 残局相关函数
+
+/**
+ * 检查是否进入残局情况
+ * 在每次玩家死亡时调用，检查是否有玩家进入残局情况
+ */
+void CheckClutchSituation()
+{
+    // 首先重置所有玩家的残局状态
+    for (int i = 1; i <= MaxClients; i++) {
+        g_bInClutchSituation[i] = false;
+        g_iClutchEnemyCount[i] = 0;
+    }
+
+    // 检查T队和CT队
+    for (int team = 2; team <= 3; team++) {
+        // 计算队伍中存活的玩家数
+        int aliveCount = 0;
+        int lastAlivePlayer = -1;
+
+        for (int i = 1; i <= MaxClients; i++) {
+            if (IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == team) {
+                aliveCount++;
+                lastAlivePlayer = i;
+            }
+        }
+
+        // 如果只有一名玩家存活，可能是残局情况
+        if (aliveCount == 1 && lastAlivePlayer != -1) {
+            // 计算敌队存活的玩家数
+            int enemyTeam = (team == 2) ? 3 : 2;
+            int enemyAliveCount = 0;
+
+            for (int i = 1; i <= MaxClients; i++) {
+                if (IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == enemyTeam) {
+                    enemyAliveCount++;
+                }
+            }
+
+            // 如果敌队至少有2名玩家，则标记为残局情况
+            if (enemyAliveCount >= 2) {
+                g_bInClutchSituation[lastAlivePlayer] = true;
+                g_iClutchEnemyCount[lastAlivePlayer] = enemyAliveCount;
+
+                char playerName[MAX_NAME_LENGTH];
+                GetClientName(lastAlivePlayer, playerName, sizeof(playerName));
+
+                // 通知玩家进入残局
+                PrintToChatAll("\x04[%s]:\x03 %s 进入了1v%d残局情况!", MODNAME, playerName, enemyAliveCount);
+            }
+        }
+    }
 }
 
 /**
@@ -296,38 +364,42 @@ void CheckClutch(int client)
         return;
     }
 
-    // 计算队伍中存活的玩家数
-    int aliveCount = 0;
+    // 如果玩家不在残局情况中，直接返回
+    if (!g_bInClutchSituation[client]) {
+        return;
+    }
+
+    // 计算敌队存活的玩家数
+    int enemyTeam = (team == 2) ? 3 : 2;
+    int enemyAliveCount = 0;
+
     for (int i = 1; i <= MaxClients; i++) {
-        if (IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == team) {
-            aliveCount++;
+        if (IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == enemyTeam) {
+            enemyAliveCount++;
         }
     }
 
-    // 如果只有这个玩家存活，则可能是残局
-    if (aliveCount == 1) {
-        // 计算敌队存活的玩家数
-        int enemyTeam = (team == 2) ? 3 : 2;
-        int enemyAliveCount = 0;
-        for (int i = 1; i <= MaxClients; i++) {
-            if (IsClientInGame(i) && IsPlayerAlive(i) && GetClientTeam(i) == enemyTeam) {
-                enemyAliveCount++;
+    // 如果敌队已经全部被消灭，则玩家赢得了残局
+    if (enemyAliveCount == 0) {
+        // 记录残局获胜
+        g_PlayerStats[client].clutches++;
+
+        char playerName[MAX_NAME_LENGTH];
+        GetClientName(client, playerName, sizeof(playerName));
+
+        // 输出残局获胜信息
+        PrintToChatAll("\x04[%s]:\x03 %s 赢得了1v%d残局!", MODNAME, playerName, g_iClutchEnemyCount[client]);
+
+        for (int j = 1; j <= MaxClients; j++) {
+            if (IsClientInGame(j) && !IsFakeClient(j)) {
+                SetGlobalTransTarget(j);
+                PrintToChat(j, "\x04[%s]:\x03 %t", MODNAME, "Clutch Win", playerName, g_iClutchEnemyCount[client]);
             }
         }
 
-        // 如果敌队至少有2名玩家，则算作残局
-        if (enemyAliveCount >= 2) {
-            g_PlayerStats[client].clutches++;
-
-            char playerName[MAX_NAME_LENGTH];
-            GetClientName(client, playerName, sizeof(playerName));
-            for (int j = 1; j <= MaxClients; j++) {
-                if (IsClientInGame(j) && !IsFakeClient(j)) {
-                    SetGlobalTransTarget(j);
-                    PrintToChat(j, "\x04[%s]:\x03 %t", MODNAME, "Clutch Win", playerName, enemyAliveCount);
-                }
-            }
-        }
+        // 重置残局状态
+        g_bInClutchSituation[client] = false;
+        g_iClutchEnemyCount[client] = 0;
     }
 }
 

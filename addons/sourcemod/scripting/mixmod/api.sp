@@ -26,7 +26,7 @@ Handle g_hForward_OnPlayerNotReady = INVALID_HANDLE;
  */
 void Mix_InitAPI()
 {
-    // 创建全局前向
+    // 创建全局Forward
     g_hForward_OnMixStart = CreateGlobalForward("MixMod_OnMixStart", ET_Ignore);
     g_hForward_OnMixEnd = CreateGlobalForward("MixMod_OnMixEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
     g_hForward_OnHalfTime = CreateGlobalForward("MixMod_OnHalfTime", ET_Ignore, Param_Cell, Param_Cell);
