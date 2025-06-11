@@ -71,11 +71,6 @@ public Action Mix_SwapTimer(Handle timer)
                 CS_SwitchTeam(client, CS_TEAM_CT);
                 // 不再设置模型，因为现在换边不需要选择模型
             }
-
-            // 重置玩家金钱为800
-            if (team > 1 && g_iAccount != -1) {
-                SetEntProp(client, Prop_Send, "m_iAccount", 800);
-            }
         }
     }
 

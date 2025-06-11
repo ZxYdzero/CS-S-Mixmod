@@ -413,4 +413,18 @@
         "chi"     "比赛统计数据"
         "ru"        "Статистика матча"
     }
+
+    "Match Stats Header"
+    {
+        "en"        "%-20s %5s %5s %5s %5s %5s"
+        "chi"     "%-20s %5s %5s %5s %5s %5s"
+        "ru"        "%-20s %5s %5s %5s %5s %5s"
+    }
+
+    "Match Stats Player"
+    {
+        "en"        "Player     Kills Deaths Assists HS   K/D"
+        "chi"     "玩家     击杀  死亡  助攻  爆头  K/D"
+        "ru"        "Игрок     Убийства Смерти Ассисты ХС   К/Д"
+    }
 }

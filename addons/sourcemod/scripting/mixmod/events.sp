@@ -148,7 +148,18 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 
                 // 输出调试信息
                 PrintToChatAll("\x04[%s]:\x03 第二半场 - 回合: %d, CT总分: %d, T总分: %d", MODNAME, g_iCurrentRound, g_iCTScore, g_iTScore);
+                if (g_iCurrentRound == 1 ) {
+                    // 重置玩家金钱为800
+                    for (int client = 1; client <= MaxClients; client++) {
+                        if (IsClientInGame(client) && !IsFakeClient(client) && IsClientConnected(client)) {
+                            int team = GetClientTeam(client);
 
+                            if (team > 1) {
+                                SetEntProp(client, Prop_Send, "m_iAccount", 800);
+                            }
+                        }
+                    }
+                }
                 // 检查比赛是否结束
                 if ((g_iCTScore == 13) || (g_iTScore == 13) || ((g_iCTScore == 12) && (g_iTScore == 12) && (GetConVarInt(g_hCvarMr3Enabled) == 0))) {
                     // 输出调试信息
@@ -464,15 +475,11 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
         if (winningTeam == 2) { // T Win
             g_iTScoreH1++;
             g_iTScore++;
-            // 输出调试信息
-            PrintToChatAll("\x04[%s]:\x03 T队得分更新: %d", MODNAME, g_iTScore);
             // 更新游戏记分板
             SetTeamScore(2, g_iTScore);
         } else if (winningTeam == 3) { // CT Win
             g_iCTScoreH1++;
             g_iCTScore++;
-            // 输出调试信息
-            PrintToChatAll("\x04[%s]:\x03 CT队得分更新: %d", MODNAME, g_iCTScore);
             // 更新游戏记分板
             SetTeamScore(3, g_iCTScore);
         }

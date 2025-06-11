@@ -456,7 +456,7 @@ void Mix_ShowAllPlayersStats()
 
     // 收集所有有效玩家
     for (int i = 1; i <= MaxClients; i++) {
-        if (IsClientInGame(i) && !IsFakeClient(i) && (g_PlayerStats[i].kills > 0 || g_PlayerStats[i].deaths > 0)) {
+        if (IsClientInGame(i) && !IsFakeClient(i)) {
             playerIds[playerCount++] = i;
         }
     }
@@ -484,7 +484,7 @@ void Mix_ShowAllPlayersStats()
                     playerName[20] = '\0';
                 }
 
-                PrintToChat(i, "\x04[%s]:\x03 %-20s %5d %5d %5d %5d %5.2f",
+                PrintToChat(i, "\x04[%s]:\x03 %-15s %5d %5d %5d %5d %5.2f",
                     MODNAME,
                     playerName,
                     g_PlayerStats[playerId].kills,
@@ -520,6 +520,10 @@ void Mix_ResetAllStats()
 {
     for (int i = 1; i <= MaxClients; i++) {
         g_PlayerStats[i].Reset();
+        if (IsClientInGame(i) && !IsFakeClient(i)) {
+            SetEntProp(i, Prop_Data, "m_iFrags", 0);
+            SetEntProp(i, Prop_Data, "m_iDeaths", 0);
+        }
     }
 }
 
