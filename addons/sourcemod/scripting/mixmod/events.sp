@@ -57,13 +57,34 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 {
     Mix_HudUpdate();
 
-    // 只有在比赛正式开始后才更新统计数据
-    if (g_bHasMixStarted && g_bDidLiveStarted) {
-        Mix_Stats_OnRoundStart();
-    }
-
     // 调用API事件
     if (g_bHasMixStarted && g_bDidLiveStarted) {
+        // 加时赛/半场第一回合重置金钱和武器
+        if ((g_iCurrentHalf == 2 && g_iCurrentRound == 1) || (g_iCurrentHalf > 2 && g_iCurrentRound == 1)) {
+            int money = (g_iCurrentHalf > 2) ? 10000 : 800;
+            for (int client = 1; client <= MaxClients; client++) {
+                if (IsClientInGame(client) && !IsFakeClient(client) && IsClientConnected(client)) {
+                    int team = GetClientTeam(client);
+                    if (team > 1) {
+                        // 清除武器
+                        Mix_RemovePlayerGuns(client);
+                        // 发放默认手枪和小刀
+                        if (team == 2) {
+                            GivePlayerItem(client, "weapon_glock");
+                        } else if (team == 3) {
+                            GivePlayerItem(client, "weapon_usp");
+                        }
+                        GivePlayerItem(client, "weapon_knife");
+                        // 重置护甲和头盔
+                        SetEntProp(client, Prop_Send, "m_bHasHelmet", 0);
+                        SetEntProp(client, Prop_Send, "m_ArmorValue", 0);
+                        // 重置金钱
+                        SetEntProp(client, Prop_Send, "m_iAccount", money);
+                    }
+                }
+            }
+        }
+        Mix_Stats_OnRoundStart();
         Mix_API_OnRoundStart(g_iCurrentRound, g_iCurrentHalf);
     }
 
@@ -506,6 +527,22 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             temp = g_iCTScore;
             g_iCTScore = g_iTScore;
             g_iTScore = temp;
+
+            for (int i = 1; i <= MaxClients; i++) {
+                if (IsClientInGame(i) && !IsFakeClient(i) && IsPlayerAlive(i)) {
+                    Mix_RemovePlayerGuns(i);
+                    int team = GetClientTeam(i);
+                    if (team == 2) {
+                        GivePlayerItem(i, "weapon_glock");
+                    } else if (team == 3) {
+                        GivePlayerItem(i, "weapon_usp");
+                    }
+                    GivePlayerItem(i, "weapon_knife");
+                    SetEntProp(i, Prop_Send, "m_bHasHelmet", 0);
+                    SetEntProp(i, Prop_Send, "m_ArmorValue", 0);
+
+                }
+            }
 
             // 输出调试信息
             PrintToChatAll("\x04[%s]:\x03 队伍交换后分数更新: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
