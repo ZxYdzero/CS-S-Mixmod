@@ -232,9 +232,6 @@ void Mix_CreateWinningTeamPanel(int team)
         CloseHandle(g_hWinTeamPanel);
     }
 
-    // 输出调试信息
-    PrintToChatAll("\x04[%s]:\x03 Mix_CreateWinningTeamPanel被调用，胜利队伍=%d", MODNAME, team);
-
     char teamAName[32];
     char teamBName[32];
     GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
@@ -270,7 +267,7 @@ void Mix_CreateWinningTeamPanel(int team)
     // 调用API事件
     Mix_API_OnMixEnd(team, g_iCTScore, g_iTScore);
 
-    CreateTimer(2.0, Mix_DisplayScores);
+    CreateTimer(0.0, Mix_DisplayScores);
 }
 
 /**

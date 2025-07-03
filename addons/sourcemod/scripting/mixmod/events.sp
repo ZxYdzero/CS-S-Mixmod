@@ -528,24 +528,20 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             g_iCTScore = g_iTScore;
             g_iTScore = temp;
 
-            for (int i = 1; i <= MaxClients; i++) {
-                if (IsClientInGame(i) && !IsFakeClient(i) && IsPlayerAlive(i)) {
-                    Mix_RemovePlayerGuns(i);
-                    int team = GetClientTeam(i);
-                    if (team == 2) {
-                        GivePlayerItem(i, "weapon_glock");
-                    } else if (team == 3) {
-                        GivePlayerItem(i, "weapon_usp");
-                    }
-                    GivePlayerItem(i, "weapon_knife");
-                    SetEntProp(i, Prop_Send, "m_bHasHelmet", 0);
-                    SetEntProp(i, Prop_Send, "m_ArmorValue", 0);
-
-                }
-            }
-
-            // 输出调试信息
-            PrintToChatAll("\x04[%s]:\x03 队伍交换后分数更新: CT=%d, T=%d", MODNAME, g_iCTScore, g_iTScore);
+            // for (int i = 1; i <= MaxClients; i++) {
+            //     if (IsClientInGame(i) && !IsFakeClient(i) && IsPlayerAlive(i)) {
+            //         Mix_RemovePlayerGuns(i);
+            //         int team = GetClientTeam(i);
+            //         if (team == 2) {
+            //             GivePlayerItem(i, "weapon_glock");
+            //         } else if (team == 3) {
+            //             GivePlayerItem(i, "weapon_usp");
+            //         }
+            //         GivePlayerItem(i, "weapon_knife");
+            //         SetEntProp(i, Prop_Send, "m_bHasHelmet", 0);
+            //         SetEntProp(i, Prop_Send, "m_ArmorValue", 0);
+            //     }
+            // }
 
             if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
                 g_bDidLiveStarted = false;
