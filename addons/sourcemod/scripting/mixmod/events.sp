@@ -66,11 +66,26 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                 if (IsClientInGame(client) && !IsFakeClient(client) && IsClientConnected(client)) {
                     int team = GetClientTeam(client);
                     if (team > 1) {
+                        bool hasC4 = false;
+                        // 检查玩家是否持有C4
+                        if (team == 2) {
+                            int c4 = GetPlayerWeaponSlot(client, 4); // C4在槽位4
+                            if (c4 != -1) {
+                                char weaponName[32];
+                                GetEdictClassname(c4, weaponName, sizeof(weaponName));
+                                if (StrEqual(weaponName, "weapon_c4")) {
+                                    hasC4 = true;
+                                }
+                            }
+                        }
                         // 清除武器
                         Mix_RemovePlayerGuns(client);
                         // 发放默认手枪和小刀
                         if (team == 2) {
                             GivePlayerItem(client, "weapon_glock");
+                            if (hasC4) {
+                                GivePlayerItem(client, "weapon_c4");
+                            }
                         } else if (team == 3) {
                             GivePlayerItem(client, "weapon_usp");
                         }
