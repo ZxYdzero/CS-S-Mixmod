@@ -126,6 +126,13 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
         }
 
         if (g_bHasMixStarted) {
+            if (g_bIsBuyZoneDisabled  && g_bIsKo3Running != true) {
+                if (Mix_EnableBuyZone()) {
+                    g_bIsBuyZoneDisabled = false;
+                }
+                PrintToChatAll("\x04[%s]:\x03 恢复购买区成功", MODNAME);
+            }
+            
             if (GetConVarInt(g_hCvarRemoveProps) == 1) {
                 Mix_RemoveProps();
             }
