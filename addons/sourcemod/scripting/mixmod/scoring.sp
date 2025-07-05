@@ -275,33 +275,46 @@ void Mix_CreateWinningTeamPanel(int team)
  */
 public Action Mix_DisplayScores(Handle timer)
 {
-    int max = 0;
+    // 先给每个玩家打印自己的统计数据
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientConnected(i) && !IsFakeClient(i)) {
+            int kills = g_iScoresOfTheGame[i];
+            int deaths = g_iDeathsOfTheGame[i];
+            char name[33];
+            GetClientName(i, name, sizeof(name));
+            PrintToChat(i, "\x04[%s]:\x03 你的本场统计：击杀 \x04%d\x03 ，死亡 \x04%d\x03", MODNAME, kills, deaths);
+        }
+    }
+    // ...existing code...
+    int max = -1;
     int winner = -1;
-
+    // 先找最大击杀数
     for (int i = 1; i <= MaxClients; i++) {
         if (IsClientConnected(i)) {
-            if (g_iScoresOfTheGame[i] >= max) {
+            if (g_iScoresOfTheGame[i] > max) {
                 max = g_iScoresOfTheGame[i];
-                winner = i;
             }
         }
     }
-
+    // 再找第一个达到最大击杀数的玩家（允许0杀）
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientConnected(i) && g_iScoresOfTheGame[i] == max) {
+            winner = i;
+            break;
+        }
+    }
     if (winner < 1) {
         PrintToChatAll("\x04[%s]:\x03 尝试查找MVP玩家时出错...", MODNAME);
         return Plugin_Continue;
     }
-
     char winnerName[33];
     GetClientName(winner, winnerName, sizeof(winnerName));
     int kills = g_iScoresOfTheGame[winner];
-
     PrintToChatAll("\x04[%s]:\x03 击杀统计:", MODNAME);
     PrintToChatAll("------------------");
     PrintToChatAll("\x03 - \x01MVP:\x04 %s , \x03击杀数:\x04 %d \x03!", winnerName, kills);
-
     Mix_StopRecord(0, 0);  // 停止录制
-
+    Mix_ResetAllStats();
     return Plugin_Continue;
 }
 

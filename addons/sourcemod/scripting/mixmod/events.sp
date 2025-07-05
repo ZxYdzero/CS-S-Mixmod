@@ -342,46 +342,44 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                     }
                 }
             } else if (g_iCurrentHalf > 2) {
+                // 只显示加时上下半场，严格按编号推导
+                int otRound = ((g_iCurrentHalf - 3) / 2) + 1;
+                int otHalf = ((g_iCurrentHalf - 3) % 2 == 0) ? 1 : 2;
                 if (g_iCurrentRound == 0) {
                     g_iCurrentRound = 1;
                 }
-
                 if (g_iCurrentRound > (g_iCTScoreH1 + g_iTScoreH1 + 1)) {
                     g_iCurrentRound--;
                 }
-
                 if (GetConVarInt(g_hCvarShowScores) == 1) {
-                    // 使用多语言系统
                     for (int i = 1; i <= MaxClients; i++) {
                         if (IsClientInGame(i) && !IsFakeClient(i)) {
                             SetGlobalTransTarget(i);
-                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Round", g_iCurrentRound, g_iCurrentHalf, 4);
+                            PrintToChat(i, "\x04[%s]:\x03 \x0B加时第%d轮 %s半场 - 回合: %d", MODNAME, otRound, otHalf == 1 ? "上" : "下", g_iCurrentRound);
                             PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Score", teamAName, g_iCTScore, teamBName, g_iTScore);
                         }
                     }
                 }
-
-                if (g_iCTScore == 15) {
-                    // 使用多语言系统
+                // 赛点判定：本轮加时分数达到3分时提示（即再赢一分就胜利）
+                int ctThisOT = g_iCTScore - g_iCTScore2;
+                int tThisOT = g_iTScore - g_iTScore2;
+                if (ctThisOT == 3) {
                     for (int i = 1; i <= MaxClients; i++) {
                         if (IsClientInGame(i) && !IsFakeClient(i)) {
                             SetGlobalTransTarget(i);
-                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamAName);
+                            PrintToChat(i, "\x04[%s]:\x03 \x0B加时第%d轮 %s半场 - 赛点 for %s", MODNAME, otRound, otHalf == 1 ? "上" : "下", teamAName);
                         }
                     }
                 }
-                if (g_iTScore == 15) {
-                    // 使用多语言系统
+                if (tThisOT == 3) {
                     for (int i = 1; i <= MaxClients; i++) {
                         if (IsClientInGame(i) && !IsFakeClient(i)) {
                             SetGlobalTransTarget(i);
-                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Match Point", teamBName);
+                            PrintToChat(i, "\x04[%s]:\x03 \x0B加时第%d轮 %s半场 - 赛点 for %s", MODNAME, otRound, otHalf == 1 ? "上" : "下", teamBName);
                         }
                     }
                 }
-
                 if (!g_bDidLiveStarted) {
-                    // 使用多语言系统
                     for (int i = 1; i <= MaxClients; i++) {
                         if (IsClientInGame(i) && !IsFakeClient(i)) {
                             SetGlobalTransTarget(i);
@@ -392,11 +390,8 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
             }
 
             if ((g_bHasMixStarted) && (g_bDidLiveStarted)) {
-                g_iCurrentRound++;
-
                 if ((g_iCurrentHalf == 1) && (g_iCurrentRound == 13)) {
                     g_bSwapNow = true;
-
                     if (GetConVarInt(g_hCvarShowSwitchInPanel) == 1) {
                         char titleFormat[32];
                         Format(titleFormat, sizeof(titleFormat), "%s: ", MODNAME);
@@ -407,19 +402,15 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                         Format(buffer, sizeof(buffer), "%t", "Teams Will Swap");
                         DrawPanelText(panel, buffer);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
-
                         SetPanelCurrentKey(panel, 10);
                         DrawPanelItem(panel, "关闭", ITEMDRAW_CONTROL);
-
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SendPanelToClient(panel, i, Mix_HandleDoNothing, (GetConVarInt(g_hFreezeTime) - 1));
                             }
                         }
-
                         CloseHandle(panel);
                     } else {
-                        // 使用多语言系统
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SetGlobalTransTarget(i);
@@ -427,9 +418,8 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                             }
                         }
                     }
-                } else if ((g_iCurrentHalf == 3) && (g_iCurrentRound == 4)) {
+                } else if ((g_iCurrentHalf >= 3) && (g_iCurrentRound == 4)) {
                     g_bSwapNow = true;
-
                     if (GetConVarInt(g_hCvarShowSwitchInPanel) == 1) {
                         char titleFormat[32];
                         Format(titleFormat, sizeof(titleFormat), "%s: ", MODNAME);
@@ -440,19 +430,15 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                         Format(buffer, sizeof(buffer), "%t", "Teams Will Swap");
                         DrawPanelText(panel, buffer);
                         DrawPanelItem(panel, "", ITEMDRAW_SPACER);
-
                         SetPanelCurrentKey(panel, 10);
                         DrawPanelItem(panel, "关闭", ITEMDRAW_CONTROL);
-
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SendPanelToClient(panel, i, Mix_HandleDoNothing, (GetConVarInt(g_hFreezeTime) - 1));
                             }
                         }
-
                         CloseHandle(panel);
                     } else {
-                        // 使用多语言系统
                         for (int i = 1; i <= MaxClients; i++) {
                             if (IsClientInGame(i) && !IsFakeClient(i)) {
                                 SetGlobalTransTarget(i);
@@ -511,13 +497,21 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
         if (winningTeam == 2) { // T Win
             g_iTScoreH1++;
             g_iTScore++;
-            // 更新游戏记分板
-            SetTeamScore(2, g_iTScore);
         } else if (winningTeam == 3) { // CT Win
             g_iCTScoreH1++;
             g_iCTScore++;
-            // 更新游戏记分板
-            SetTeamScore(3, g_iCTScore);
+        }
+
+        // 只在回合结束时自增g_iCurrentRound
+        g_iCurrentRound++;
+
+        // MR12换边：第1半场打满12回合（g_iCurrentRound>12时才换边）
+        if ((g_iCurrentHalf == 1) && (g_iCurrentRound > 12)) {
+            g_bSwapNow = true;
+        }
+        // 加时赛换边：每半场打满3回合（g_iCurrentRound>3时才换边）
+        else if ((g_iCurrentHalf >= 3) && (g_iCurrentRound > 3)) {
+            g_bSwapNow = true;
         }
 
         if (g_bSwapNow) {
@@ -542,21 +536,6 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             temp = g_iCTScore;
             g_iCTScore = g_iTScore;
             g_iTScore = temp;
-
-            // for (int i = 1; i <= MaxClients; i++) {
-            //     if (IsClientInGame(i) && !IsFakeClient(i) && IsPlayerAlive(i)) {
-            //         Mix_RemovePlayerGuns(i);
-            //         int team = GetClientTeam(i);
-            //         if (team == 2) {
-            //             GivePlayerItem(i, "weapon_glock");
-            //         } else if (team == 3) {
-            //             GivePlayerItem(i, "weapon_usp");
-            //         }
-            //         GivePlayerItem(i, "weapon_knife");
-            //         SetEntProp(i, Prop_Send, "m_bHasHelmet", 0);
-            //         SetEntProp(i, Prop_Send, "m_ArmorValue", 0);
-            //     }
-            // }
 
             if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
                 g_bDidLiveStarted = false;
@@ -589,60 +568,90 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             }
         }
 
-        // 如果是MR3，检查比赛结束
-        if ((g_iCurrentHalf > 2) && ((g_iCTScore - g_iCTScore2 >= 4) || (g_iTScore - g_iTScore2 >= 4) || ((g_iCTScore - g_iCTScore2 == 3) && (g_iTScore - g_iTScore2 == 3)))) {
+        // 如果是MR3，检查加时赛是否需要继续
+        if (g_iCurrentHalf > 2 && ((g_iCTScore - g_iCTScore2 >= 4) || (g_iTScore - g_iTScore2 >= 4) || ((g_iCTScore - g_iCTScore2 == 3) && (g_iTScore - g_iTScore2 == 3)))) {
             // 输出调试信息
-            PrintToChatAll("\x04[%s]:\x03 MR3比赛结束条件触发: CT=%d (原始=%d), T=%d (原始=%d)", MODNAME, g_iCTScore, g_iCTScore2, g_iTScore, g_iTScore2);
+            PrintToChatAll("\x04[%s]:\x03 MR3加时赛阶段结束: CT=%d (原始=%d), T=%d (原始=%d)", MODNAME, g_iCTScore, g_iCTScore2, g_iTScore, g_iTScore2);
 
-            if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
-                if (g_iCTScore >= 16) {
-                    Mix_CreateWinningTeamPanel(3);
-                } else if (g_iTScore >= 16) {
-                    Mix_CreateWinningTeamPanel(2);
-                } else if (g_iCTScore == g_iTScore) {
-                    Mix_CreateWinningTeamPanel(1);
+            // 判断是否平局
+            if ((g_iCTScore - g_iCTScore2 == 3) && (g_iTScore - g_iTScore2 == 3)) {
+                // 平局，自动进入下一轮加时赛
+                PrintToChatAll("\x04[%s]:\x03 加时赛平局，自动进入下一轮MR3加时赛！", MODNAME);
+                float time = GetConVarFloat(g_hCvarDelayBeforeSwapping);
+                if (time < 0.1) time = 0.1;
+                CreateTimer(time, Mix_SwapTimer);
+                g_iCurrentRound = 1;
+                g_iCurrentHalf++;
+                if ((g_iCurrentHalf % 2) == 0) {
+                    g_iCurrentHalf++;
+                }
+                g_iCTScore2 = g_iCTScore;
+                g_iTScore2 = g_iTScore;
+                if ((GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) && g_bIsItManual) {
+                    g_bDidLiveStarted = false;
+                }
+                if (GetConVarInt(g_hCvarPlayTeamSwapedSound) == 1) {
+                    EmitSoundToAll("ambient/misc/brass_bell_C.wav");
+                }
+                Mix_ExecuteMr3Config(0);
+                // 调用API事件
+                Mix_API_OnHalfTime(g_iCTScore, g_iTScore);
+                if (GetConVarInt(g_hCvarHalfAutoLiveStart) == 0) {
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Type Live");
+                        }
+                    }
+                } else {
+                    for (int i = 1; i <= MaxClients; i++) {
+                        if (IsClientInGame(i) && !IsFakeClient(i)) {
+                            SetGlobalTransTarget(i);
+                            PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Teams Swapped");
+                        }
+                    }
                 }
             } else {
-                if (g_iCTScore >= 16) {
-                    CreateTimer(3.0, Mix_InformMatchEnd, 3);
-                } else if (g_iTScore >= 16) {
-                    CreateTimer(3.0, Mix_InformMatchEnd, 2);
-                } else if (g_iCTScore == g_iTScore) {
-                    CreateTimer(3.0, Mix_InformMatchEnd, 1);
+                // 有一方净胜4分或率先到达4分，分出胜负，正常结束比赛
+                if (GetConVarInt(g_hCvarInformWinnerInPanel) == 1) {
+                    if (g_iCTScore > g_iTScore) {
+                        Mix_CreateWinningTeamPanel(3);
+                    } else if (g_iTScore > g_iCTScore) {
+                        Mix_CreateWinningTeamPanel(2);
+                    }
+                } else {
+                    if (g_iCTScore > g_iTScore) {
+                        CreateTimer(3.0, Mix_InformMatchEnd, 3);
+                    } else if (g_iTScore > g_iCTScore) {
+                        CreateTimer(3.0, Mix_InformMatchEnd, 2);
+                    }
                 }
-            }
-
-            // 输出调试信息
-            PrintToChatAll("\x04[%s]:\x03 MR3模式下正在重置比赛状态...", MODNAME);
-
-            g_bHasMixStarted = false;
-            g_bDidLiveStarted = false;
-
-            g_bIsItManual = true;
-            if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
-                g_bAllowReady = true;
-                g_iReadyCount = 0;
-                g_bHasVoteMap = false;
-                g_bTenVoted = false;
-                for (int i = 0; i < MaxClients; i++) {
-                    g_bReadyPlayers[i] = false;
-                    g_iReadyPlayersData[i] = -1;
+                // 输出调试信息
+                PrintToChatAll("\x04[%s]:\x03 MR3加时赛分出胜负，比赛结束！", MODNAME);
+                g_bHasMixStarted = false;
+                g_bDidLiveStarted = false;
+                g_bIsItManual = true;
+                if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
+                    g_bAllowReady = true;
+                    g_iReadyCount = 0;
+                    g_bHasVoteMap = false;
+                    g_bTenVoted = false;
+                    for (int i = 0; i < MaxClients; i++) {
+                        g_bReadyPlayers[i] = false;
+                        g_iReadyPlayersData[i] = -1;
+                    }
                 }
-            }
-
-            g_iCurrentRound = 1;
-            g_iCurrentHalf = 1;
-            g_iTScore = -1;
-            g_iCTScore = -1;
-
-            g_bSaveClientsScore = false;
-
-            SetConVarString(g_hHostName, g_szHostName);
-
-            Mix_ExecutePracConfig(0);
-
-            if (GetConVarInt(g_hCvarRemovePassWhenMixIsEnded) == 1) {
-                Mix_RemovePassword(0);
+                g_iCurrentRound = 1;
+                g_iCurrentHalf = 1;
+                g_iTScore = -1;
+                g_iCTScore = -1;
+                g_bSaveClientsScore = false;
+                SetConVarString(g_hHostName, g_szHostName);
+                Mix_ExecutePracConfig(0);
+                if (GetConVarInt(g_hCvarRemovePassWhenMixIsEnded) == 1) {
+                    Mix_RemovePassword(0);
+                }
             }
         }
     }

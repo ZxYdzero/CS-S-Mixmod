@@ -260,9 +260,6 @@ void Mix_ResetMatchState()
         g_bInClutchSituation[i] = false;
         g_iClutchEnemyCount[i] = 0;
     }
-
-    // 重置统计数据
-    Mix_ResetAllStats();
 }
 
 /**

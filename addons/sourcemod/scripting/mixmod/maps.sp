@@ -185,8 +185,9 @@ void Mix_ExecuteMr12Config(int client)
         PrintToChatAll("\x04[%s]:\x03 正在执行 \x04%s \x03...", MODNAME, customCfg);
         PrintToChatAll("\x04[%s]:\x03 所有玩家的战绩和分数已重置", MODNAME);
 
+        Mix_StartRecord(0);
+
         ServerCommand("exec %s", customCfg);
-        Mix_StartRecord(client);
     }
 }
 
@@ -249,7 +250,7 @@ void Mix_StartRecord(int client)
         char date[32];
         char timeStr[32];
         char folder[64];
-        char filePath[128];
+        char filePath[512];
 
         GetCurrentMap(mapName, sizeof(mapName));
         GetConVarString(g_hCvarCusomNameTeamCT, teamAName, sizeof(teamAName));
@@ -259,7 +260,7 @@ void Mix_StartRecord(int client)
         FormatTime(date, sizeof(date), "%Y-%m-%d", GetTime());
         FormatTime(timeStr, sizeof(timeStr), "%H-%M", GetTime());
 
-        Format(filePath, sizeof(filePath), "%s/%s_%s-vs-%s_%s_%s", folder, mapName, teamAName, teamBName, date, timeStr);
+        Format(filePath, sizeof(filePath), "%s/auto_%s_%s_%s_%s-vs-%s", folder, date, timeStr, mapName, teamAName, teamBName);
 
         if (client == 0) {
             if (g_bIsItManual) {
@@ -271,6 +272,8 @@ void Mix_StartRecord(int client)
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03开始录制", MODNAME, name);
         }
 
+        // 先停止旧的录制，再开始新录制
+        ServerCommand("tv_stoprecord");
         ServerCommand("tv_record %s", filePath);
         g_bIsRecording = true;
 
