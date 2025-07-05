@@ -299,7 +299,7 @@ public int Mix_HandleTeamsVoteMenu(Handle menu, MenuAction action, int param1, i
         SetTeamScore(2, g_iTScore);
         PrintToChatAll("\x04[%s]:\x03 分数和所有玩家的战绩已重置", MODNAME);
 
-        Mix_ExecuteMr12Config(0);
+        Mix_ExecuteMr12Config();
     }
     return 0;
 }

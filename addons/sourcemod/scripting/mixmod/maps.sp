@@ -162,7 +162,7 @@ public Action Mix_ChangeMap(Handle timer, int client)
 /**
  * 执行mr12配置
  */
-void Mix_ExecuteMr12Config(int client)
+void Mix_ExecuteMr12Config()
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
         // 重置所有玩家的战绩和统计数据

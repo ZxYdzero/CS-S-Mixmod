@@ -57,6 +57,11 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 {
     Mix_HudUpdate();
 
+    if (g_bHasMixStarted && g_bDidLiveStarted && !s_bMixStartCalled) {
+        Mix_API_OnMixStart();
+        s_bMixStartCalled = true;
+    }
+
     // 调用API事件
     if (g_bHasMixStarted && g_bDidLiveStarted) {
         // 加时赛/半场第一回合重置金钱和武器
@@ -471,6 +476,14 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
 {
     int winningTeam = GetEventInt(event, "winner");
 
+    // 静态变量记录初始队名（仅首次赋值）
+    static char s_szInitCTName[32] = "";
+    static char s_szInitTName[32] = "";
+    if (s_szInitCTName[0] == '\0' || s_szInitTName[0] == '\0') {
+        GetConVarString(g_hCvarCusomNameTeamCT, s_szInitCTName, sizeof(s_szInitCTName));
+        GetConVarString(g_hCvarCusomNameTeamT, s_szInitTName, sizeof(s_szInitTName));
+    }
+
     // 调用API事件
     if (g_bHasMixStarted && g_bDidLiveStarted) {
         Mix_API_OnRoundEnd(winningTeam, g_iCTScore, g_iTScore);
@@ -495,10 +508,18 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                     PrintToChatAll("\x04[%s]:\x03 防守方队伍赢得了刀局 - 正在进行队伍选择投票...", MODNAME);
                 }
             } else {
-                Mix_ExecuteMr12Config(0);
+                Mix_ExecuteMr12Config();
             }
         }
     }
+
+    // 比赛彻底结束时还原队名
+    static bool s_bLastMixStarted = false;
+    if (!g_bHasMixStarted && s_bLastMixStarted) {
+        SetConVarString(g_hCvarCusomNameTeamCT, s_szInitCTName);
+        SetConVarString(g_hCvarCusomNameTeamT, s_szInitTName);
+    }
+    s_bLastMixStarted = g_bHasMixStarted;
 
     if (g_bHasMixStarted && g_bDidLiveStarted && !g_bIsKo3Running) {
         if (winningTeam == 2) { // T Win
@@ -525,8 +546,16 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
         }
 
         if (g_bSwapNow) {
+
             g_iCTScoreH1 = g_iCTScore;
             g_iTScoreH1 = g_iTScore;
+
+            // 交换自定义队伍名称
+            char ctName[32], tName[32];
+            GetConVarString(g_hCvarCusomNameTeamCT, ctName, sizeof(ctName));
+            GetConVarString(g_hCvarCusomNameTeamT, tName, sizeof(tName));
+            SetConVarString(g_hCvarCusomNameTeamCT, tName);
+            SetConVarString(g_hCvarCusomNameTeamT, ctName);
 
             float time = GetConVarFloat(g_hCvarDelayBeforeSwapping);
             if (time < 0.1) {

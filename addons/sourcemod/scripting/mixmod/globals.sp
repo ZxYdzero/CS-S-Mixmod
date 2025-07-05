@@ -29,6 +29,8 @@ int g_iTScoreH1 = 0;            // T队伍第一半场得分（用于记录）
 // =============================================================================
 // 插件状态相关变量
 // =============================================================================
+bool s_bMixStartCalled = false;
+
 bool g_bHasMixStarted = false;      // 是否已开始比赛
 bool g_bDidLiveStarted = false;     // 是否已开始Live
 bool g_bSwapNow = false;            // 是否需要立即交换队伍

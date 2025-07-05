@@ -372,7 +372,7 @@ void Mix_StartLive(int client)
         }
 
         // 首先执行mr12配置，确保配置正确加载
-        Mix_ExecuteMr12Config(client);
+        Mix_ExecuteMr12Config();
 
         g_bHasMixStarted = true;
         g_bDidLiveStarted = true;
