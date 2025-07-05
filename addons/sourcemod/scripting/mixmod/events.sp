@@ -132,7 +132,7 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                 }
                 PrintToChatAll("\x04[%s]:\x03 恢复购买区成功", MODNAME);
             }
-            
+
             if (GetConVarInt(g_hCvarRemoveProps) == 1) {
                 Mix_RemoveProps();
             }
@@ -508,6 +508,9 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
             g_iCTScoreH1++;
             g_iCTScore++;
         }
+
+        SetTeamScore(3, g_iCTScoreH1);
+        SetTeamScore(2, g_iTScoreH1);
 
         // 只在回合结束时自增g_iCurrentRound
         g_iCurrentRound++;
