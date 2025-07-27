@@ -1,5 +1,10 @@
 /* Mixmod Created by iDragon *
 Updates:
+	2025/7/27 by Sparkle: (v5.2)
+		1.添加了满十个人自动T人的Cvar (默认0 不开启)
+		2.现在会正确显示玩家统计信息了
+		3.修复残局状态
+
 	2025/7/5 by Sparkle: (v5.1)
 		修复了已知问题:
 		1.自动录制demo

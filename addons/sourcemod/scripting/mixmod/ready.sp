@@ -157,26 +157,46 @@ void Mix_ResetReadySystem()
  */
 public Action Mix_ReadyCountdownTimer(Handle timer, any data)
 {
+    // 检查玩家数量是否仍然满足条件
+    int playerCount = 0;
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientInGame(i) && !IsFakeClient(i)) {
+            playerCount++;
+        }
+    }
+    
+    // 如果玩家数量不足10人或已经有10人准备，停止计时器
+    if (playerCount < 10 || g_iReadyCount >= 10) {
+        PrintToChatAll("\x04[%s]:\x03 条件已改变，取消踢出未准备玩家", MODNAME);
+        g_hKickUnreadyTimer = INVALID_HANDLE;
+        g_bKickCountdownActive = false;
+        return Plugin_Stop;
+    }
+    
     if (g_iSecond <= 0) {
-        // 倒计时结束，踢出未准备的玩家
         if (!g_bIsKicked) {
             g_bIsKicked = true;
-
+            
+            int kickCount = 0;
             for (int i = 1; i <= MaxClients; i++) {
                 if (IsClientInGame(i) && !IsFakeClient(i)) {
                     if (!g_bReadyPlayers[i]) {
                         KickClient(i, "[%s]: 你没有准备就绪，已被踢出服务器!", MODNAME);
+                        kickCount++;
                     }
                 }
             }
+            if (kickCount > 0) {
+                PrintToChatAll("\x04[%s]:\x03 已踢出 %d 名未准备的玩家!", MODNAME, kickCount);
+            }
         }
-
+        g_bKickCountdownActive = false;
+        g_hKickUnreadyTimer = INVALID_HANDLE;
         return Plugin_Stop;
     } else {
-        // 更新倒计时并通知所有玩家
         PrintCenterTextAll("未准备玩家将在 %d 秒后被踢出", g_iSecond);
         g_iSecond--;
-
-        return Plugin_Continue;
     }
+    
+    return Plugin_Continue;
 }

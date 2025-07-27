@@ -55,6 +55,7 @@ void Mix_InitConVars()
     g_hCvarDontRemovePropsMaps = CreateConVar("sm_mixmod_dont_remove_props_maplist", "de_inferno,", "不移除道具的地图列表");
     g_hCvarEnableVoiceCommands = CreateConVar("sm_mixmod_enable_voice_commands", "1", "启用sm_mmute和sm_mgag命令? 0 - 否, 1 - 是");
     g_hFogDelete = CreateConVar("sm_mixmod_delete_fog", "1", "移除地图上的雾效果? 0 - 否, 1 - 是");
+    g_hCvarOpenAutoKick = CreateConVar("sm_mixmod_auto_kick", "0", "在双方满十个人的时候自动踢出未准备玩家? 0 - 否, 1 - 是");
 
     // 插件版本控制
     g_hPluginVersion = CreateConVar("sm_mixmod_version", PLUGIN_VERSION, "满十插件版本", FCVAR_SS_ADDED|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);

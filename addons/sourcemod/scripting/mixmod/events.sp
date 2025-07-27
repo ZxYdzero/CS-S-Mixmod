@@ -116,7 +116,6 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                 PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Knife Round Started");
                 PrintToChatAll("\x04[%s]:\x03 %t", MODNAME, "Type Live");
             }
-
             for (int i = 1; i <= MaxClients; i++) {
                 if (!IsClientInGame(i) || !IsPlayerAlive(i)) {
                     continue;
@@ -155,6 +154,8 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
             // 确保记分板显示正确的分数
             SetTeamScore(3, g_iCTScoreH1);
             SetTeamScore(2, g_iTScoreH1);
+            // 重置残局状态
+            ResetAllClutchStates();
 
             if (g_iCurrentHalf == 1) {
                 if (g_iCurrentRound == 0) {
@@ -167,7 +168,6 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
 
                 // 输出调试信息
                 PrintToChatAll("\x04[%s]:\x03 第一半场 - 回合: %d, CT分数: %d, T分数: %d", MODNAME, g_iCurrentRound, g_iCTScoreH1, g_iTScoreH1);
-
                 if (GetConVarInt(g_hCvarShowScores) == 1) {
                     // 使用多语言系统
                     for (int i = 1; i <= MaxClients; i++) {
@@ -234,27 +234,7 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
                     // 输出调试信息
                     PrintToChatAll("\x04[%s]:\x03 正在重置比赛状态...", MODNAME);
 
-                    g_bHasMixStarted = false;
-                    g_bDidLiveStarted = false;
-
-                    g_bIsItManual = true;
-                    if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
-                        g_bAllowReady = true;
-                        g_iReadyCount = 0;
-                        g_bHasVoteMap = false;
-                        g_bTenVoted = false;
-                        for (int i = 0; i < MaxClients; i++) {
-                            g_bReadyPlayers[i] = false;
-                            g_iReadyPlayersData[i] = -1;
-                        }
-                    }
-
-                    g_iCurrentRound = 1;
-                    g_iCurrentHalf = 1;
-                    g_iTScore = -1;
-                    g_iCTScore = -1;
-
-                    g_bSaveClientsScore = false;
+                    Mix_ResetMatchState();
 
                     SetConVarString(g_hHostName, g_szHostName);
 
@@ -489,6 +469,10 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
         Mix_API_OnRoundEnd(winningTeam, g_iCTScore, g_iTScore);
     }
 
+    // 判断残局
+    if (g_bHasMixStarted && g_bDidLiveStarted) {
+        CheckClutchWinOnRoundEnd(winningTeam);
+    }
     if (g_bIsKo3Running) {
         if ((winningTeam == 2) || (winningTeam == 3)) {
             g_bIsKo3Running = false;
@@ -668,24 +652,7 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
                 }
                 // 输出调试信息
                 PrintToChatAll("\x04[%s]:\x03 MR3加时赛分出胜负，比赛结束！", MODNAME);
-                g_bHasMixStarted = false;
-                g_bDidLiveStarted = false;
-                g_bIsItManual = true;
-                if (GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
-                    g_bAllowReady = true;
-                    g_iReadyCount = 0;
-                    g_bHasVoteMap = false;
-                    g_bTenVoted = false;
-                    for (int i = 0; i < MaxClients; i++) {
-                        g_bReadyPlayers[i] = false;
-                        g_iReadyPlayersData[i] = -1;
-                    }
-                }
-                g_iCurrentRound = 1;
-                g_iCurrentHalf = 1;
-                g_iTScore = -1;
-                g_iCTScore = -1;
-                g_bSaveClientsScore = false;
+                Mix_ResetMatchState();
                 SetConVarString(g_hHostName, g_szHostName);
                 Mix_ExecutePracConfig(0);
                 if (GetConVarInt(g_hCvarRemovePassWhenMixIsEnded) == 1) {
@@ -787,8 +754,9 @@ public Action Mix_Event_PlayerDeath(Handle event, const char[] name, bool dontBr
     // 只有在比赛正式开始后才更新统计数据
     if (g_bHasMixStarted && g_bDidLiveStarted) {
         Mix_Stats_OnPlayerDeath(attackerId, victimId, headshot);
+        UpdateClutchStatusOnDeath();
     }
-
+    
     if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
         if (GetClientTeam(victimId) != GetClientTeam(attackerId)) {
             if (GetConVarInt(g_hCvarShowMVP) == 1) {
@@ -892,6 +860,30 @@ public Action Mix_HudTimer(Handle timer)
 {
     if (!g_bHasMixStarted) {
         Mix_CreateReadyPanel();
+    }
+    // 检查玩家数量和准备状态
+    int playerCount = 0;
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsClientInGame(i) && !IsFakeClient(i)) {
+            playerCount++;
+        }
+    }
+
+    // 如果有10名或以上玩家，但准备人数不足10人，提示准备 并且准备T出未准备玩家
+    if (playerCount >= 10 && g_iReadyCount < 10 && !g_bKickCountdownActive && GetConVarInt(g_hCvarOpenAutoKick) == 1)
+    {
+        // 启动T人流程
+        g_bKickCountdownActive = true;      // 设置状态为“进行中”
+
+        if (g_hKickUnreadyTimer != null) {
+            KillTimer(g_hKickUnreadyTimer);
+        }
+
+        // 创建新的专用计时器
+        g_hKickUnreadyTimer = CreateTimer(1.0, Mix_ReadyCountdownTimer, _, TIMER_REPEAT);
+
+        // 向所有玩家广播一次开始信息
+        PrintHintTextToAll("\x04[%s]:\x03 已满10人！未准备的玩家将在 \x05%d秒\x03 后被踢出。请输入 \x04!r\x03 准备！", MODNAME, g_iSecond);
     }
 
     return Plugin_Continue;

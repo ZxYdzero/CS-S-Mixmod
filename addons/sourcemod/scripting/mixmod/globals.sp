@@ -112,6 +112,7 @@ Handle g_hCvarDontRemovePropsMaps = INVALID_HANDLE;
 Handle g_hCvarEnableVoiceCommands = INVALID_HANDLE;
 Handle g_hPluginVersion = INVALID_HANDLE;
 Handle g_hFogDelete = INVALID_HANDLE;
+Handle g_hCvarOpenAutoKick = INVALID_HANDLE; // 允许在凑满十个人自动踢人
 
 // =============================================================================
 // 游戏ConVar及偏移量
@@ -183,11 +184,13 @@ bool g_bTenVoted = false;
 // =============================================================================
 int g_iSecond = 30;
 bool g_bIsKicked = false;
+bool g_bKickCountdownActive = false;
 
 // =============================================================================
 // HUD相关
 // =============================================================================
 Handle g_hHudTimer = INVALID_HANDLE;
+Handle g_hKickUnreadyTimer = INVALID_HANDLE;
 bool g_bHidePanel[MAXPLAYERS+1] = {false, ...};
 
 // =============================================================================
@@ -246,6 +249,7 @@ void Mix_ResetMatchState()
     // 重置地图和计时器状态
     g_szMatchMap[0] = '\0';
     g_iSecond = 30;
+    g_bKickCountdownActive = false;
     g_bIsKicked = false;
 
     // 重置所有玩家相关数组，但保留统计数据
