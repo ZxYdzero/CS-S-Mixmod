@@ -90,7 +90,6 @@ Handle g_hCvarCustomMr3Cfg = INVALID_HANDLE;
 Handle g_hCvarKickAdmins = INVALID_HANDLE;
 #pragma unused g_hCvarDisableSayCommand
 Handle g_hCvarDisableSayCommand = INVALID_HANDLE; // 禁用聊天命令的ConVar
-Handle g_hCvarMapListFrom = INVALID_HANDLE;
 Handle g_hCvarEnableKnifeRound = INVALID_HANDLE;
 Handle g_hCvarUseKo3Command = INVALID_HANDLE;
 Handle g_hCvarInformWinnerInPanel = INVALID_HANDLE;

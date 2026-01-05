@@ -35,7 +35,6 @@ void Mix_InitConVars()
     g_hCvarCustomMr3Cfg = CreateConVar("sm_mixmod_custom_mr3_cfg", "mr3.cfg", "mr3配置文件的自定义名称");
     g_hCvarKickAdmins = CreateConVar("sm_mixmod_kick_admins", "0", "使用sm_kickct或sm_kickt时也踢出管理员? 0 - 否, 1 - 是");
     g_hCvarDisableSayCommand = CreateConVar("sm_mixmod_disable_public_chat", "0", "禁用公共聊天? 0 - 否, 1 - 是, 2 - 仅在live时");
-    g_hCvarMapListFrom = CreateConVar("sm_mixmod_maplist_from", "1", "地图列表生成方式: 0 - maps目录, 1 - mapcycle.txt");
     g_hCvarEnableKnifeRound = CreateConVar("sm_mixmod_enable_knife_round", "0", "比赛开始前进行刀局? 0 - 禁用, 1 - 启用");
     g_hCvarUseKo3Command = CreateConVar("sm_mixmod_use_zb_ko3", "0", "使用zb_ko3命令代替mp_restartgame? 0 - 否, 1 - 是");
     g_hCvarInformWinnerInPanel = CreateConVar("sm_mixmod_show_winner_in", "1", "比赛结束时显示获胜队伍的方式: 0 - 聊天框, 1 - 面板");

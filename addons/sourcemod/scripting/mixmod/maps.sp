@@ -27,65 +27,30 @@ void Mix_InitMaps()
 void Mix_CreateMapList()
 {
     if (!g_bIsMapListGenerated) {
-        int mapCount = 0;
-
         // 清空地图名称数组
         for (int i = 0; i < MAX_MAPS; i++) {
             g_szMapNames[i] = "";
         }
 
-        if (GetConVarInt(g_hCvarMapListFrom) == 0) {
-            // 从maps目录生成地图列表
-            Handle dirHandle = OpenDirectory("maps");
-            if (dirHandle != INVALID_HANDLE) {
-                char fileName[64];
-                char mapName[64];
-                FileType fileType;
+        int mapCount = 0;
+        int mapSerial = -1;
+        ArrayList mapList = CreateArray(ByteCountToCells(32));
 
-                while (ReadDirEntry(dirHandle, fileName, sizeof(fileName), fileType)) {
-                    if (fileType == FileType_File) {
-                        int len = strlen(fileName);
-                        if (len > 4 && StrEqual(fileName[len-4], ".bsp", false)) {
-                            fileName[len-4] = '\0';
-
-                            if (StrContains(fileName, "de_", false) == 0 ||
-                                StrContains(fileName, "cs_", false) == 0 ||
-                                StrContains(fileName, "aim_", false) == 0) {
-                                strcopy(mapName, sizeof(mapName), fileName);
-                                strcopy(g_szMapNames[mapCount++], 32, mapName);
-
-                                if (mapCount >= MAX_MAPS) {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                CloseHandle(dirHandle);
+        if (ReadMapList(mapList, mapSerial, "default", MAPLIST_FLAG_MAPSFOLDER | MAPLIST_FLAG_CLEARARRAY)) {
+            mapCount = mapList.Length;
+            for (int i = 0; i < mapCount && i < MAX_MAPS; i++) {
+                mapList.GetString(i, g_szMapNames[i], 32);
             }
         } else {
-            // 从mapcycle.txt生成地图列表
-            Handle mapCycleFile = OpenFile("mapcycle.txt", "r");
-            if (mapCycleFile != INVALID_HANDLE) {
-                char readData[64];
-
-                while (!IsEndOfFile(mapCycleFile) && ReadFileLine(mapCycleFile, readData, sizeof(readData))) {
-                    TrimString(readData);
-
-                    if (strlen(readData) > 0 && readData[0] != '/' && readData[0] != '#') {
-                        strcopy(g_szMapNames[mapCount++], 32, readData);
-
-                        if (mapCount >= MAX_MAPS) {
-                            break;
-                        }
-                    }
-                }
-                CloseHandle(mapCycleFile);
-            }
+            PrintToChatAll("\x04[%s]:\x03 无法从maps目录读取地图列表!", MODNAME);
+            delete mapList;
+            return;
         }
 
+        delete mapList;
+
         if (mapCount <= 0) {
-            PrintToChatAll("\x04[%s]:\x03 创建地图列表失败! 请联系管理员", MODNAME);
+            PrintToChatAll("\x04[%s]:\x03 地图列表为空! 请联系管理员", MODNAME);
             return;
         }
 

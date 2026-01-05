@@ -1,5 +1,8 @@
 /* Mixmod Created by iDragon *
 Updates:
+	2025/1/5 by Sparkle: (v5.3)
+		1.修复选图菜单问题 删除Cvar
+
 	2025/7/27 by Sparkle: (v5.2)
 		1.添加了满十个人自动T人的Cvar (默认0 不开启)
 		2.现在会正确显示玩家统计信息了
