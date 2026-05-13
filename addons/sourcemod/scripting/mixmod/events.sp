@@ -22,6 +22,7 @@ void Mix_InitEvents()
     HookEvent("player_hurt", Mix_Event_PlayerHurt);
     HookEvent("player_death", Mix_Event_PlayerDeath);
     HookEvent("player_disconnect", Mix_Event_PlayerDisconnect);
+    HookEvent("player_team", Mix_Event_PlayerTeam);
     HookEvent("weapon_fire", Mix_Event_WeaponFire);
 }
 
@@ -31,6 +32,12 @@ void Mix_InitEvents()
 public Action Mix_Event_PlayerSpawn(Handle event, const char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId(GetEventInt(event, "userid"));
+
+    if (!IsValidClient(client)) {
+        return Plugin_Continue;
+    }
+
+    Mix_Stats_OnPlayerSpawn(client);
 
     if (g_bMutedPlayers[client]) {
         SetClientListeningFlags(client, VOICE_MUTED);
@@ -155,7 +162,7 @@ public Action Mix_Event_RoundStart(Handle event, const char[] name, bool dontBro
             SetTeamScore(3, g_iCTScoreH1);
             SetTeamScore(2, g_iTScoreH1);
             // 重置残局状态
-            ResetAllClutchStates();
+            Mix_ResetClutchRoundState();
 
             if (g_iCurrentHalf == 1) {
                 if (g_iCurrentRound == 0) {
@@ -470,8 +477,8 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
     }
 
     // 判断残局
-    if (g_bHasMixStarted && g_bDidLiveStarted) {
-        CheckClutchWinOnRoundEnd(winningTeam);
+    if (g_bHasMixStarted && g_bDidLiveStarted && !g_bIsKo3Running) {
+        Mix_Stats_ResolveClutch(winningTeam);
     }
     if (g_bIsKo3Running) {
         if ((winningTeam == 2) || (winningTeam == 3)) {
@@ -670,14 +677,6 @@ public Action Mix_Event_RoundEnd(Handle event, const char[] name, bool dontBroad
  */
 public Action Mix_Event_BombExploded(Handle event, const char[] name, bool dontBroadcast)
 {
-    int userid = GetEventInt(event, "userid");
-    int client = GetClientOfUserId(userid);
-
-    // 更新统计系统
-    if (g_bHasMixStarted && g_bDidLiveStarted) {
-        Mix_Stats_OnBombPlanted(client);
-    }
-
     return Plugin_Continue;
 }
 
@@ -704,15 +703,16 @@ public Action Mix_Event_PlayerHurt(Handle event, const char[] name, bool dontBro
 {
     int userid = GetEventInt(event, "userid");
     int attacker = GetEventInt(event, "attacker");
-    int damage = GetEventInt(event, "dmg_health");
-    bool headshot = GetEventBool(event, "hitgroup") == true;
+    int rawDamage = GetEventInt(event, "dmg_health");
+    int remainingHealth = GetEventInt(event, "health");
 
     int victimId = GetClientOfUserId(userid);
     int attackerId = GetClientOfUserId(attacker);
+    int actualDamage = rawDamage;
 
-    // 只有在比赛正式开始后才更新统计数据
     if (g_bHasMixStarted && g_bDidLiveStarted) {
-        Mix_Stats_OnPlayerHurt(attackerId, victimId, damage, headshot);
+        actualDamage = Mix_CalculateActualHealthDamage(victimId, rawDamage, remainingHealth);
+        Mix_Stats_OnPlayerHurt(attackerId, victimId, actualDamage);
     }
 
     // 显示队友伤害消息
@@ -729,7 +729,7 @@ public Action Mix_Event_PlayerHurt(Handle event, const char[] name, bool dontBro
                 for (int i = 1; i <= MaxClients; i++) {
                     if (IsClientInGame(i) && !IsFakeClient(i)) {
                         SetGlobalTransTarget(i);
-                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Team Damage", attackerName, victimName, damage);
+                        PrintToChat(i, "\x04[%s]:\x03 %t", MODNAME, "Team Damage", attackerName, victimName, actualDamage);
                     }
                 }
             }
@@ -754,7 +754,9 @@ public Action Mix_Event_PlayerDeath(Handle event, const char[] name, bool dontBr
     // 只有在比赛正式开始后才更新统计数据
     if (g_bHasMixStarted && g_bDidLiveStarted) {
         Mix_Stats_OnPlayerDeath(attackerId, victimId, headshot);
-        UpdateClutchStatusOnDeath();
+        if (!g_bIsKo3Running) {
+            Mix_Stats_CheckClutchAfterDeath();
+        }
     }
     
     if (IsValidClient(victimId) && IsValidClient(attackerId) && victimId != attackerId) {
@@ -776,19 +778,74 @@ public Action Mix_Event_PlayerDeath(Handle event, const char[] name, bool dontBr
  */
 public Action Mix_Event_PlayerDisconnect(Handle event, const char[] name, bool dontBroadcast)
 {
-    int client = GetClientOfUserId(GetEventInt(event, "userid"));
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
 
-    // 更新准备系统
-    if (g_bReadyPlayers[client]) {
-        g_bReadyPlayers[client] = false;
-        g_iReadyCount--;
+    Mix_HandleClientLeaving(client, userid);
+
+    return Plugin_Continue;
+}
+
+/**
+ * 玩家队伍变更事件
+ */
+public Action Mix_Event_PlayerTeam(Handle event, const char[] name, bool dontBroadcast)
+{
+    if (GetEventBool(event, "disconnect")) {
+        return Plugin_Continue;
     }
 
+    int userid = GetEventInt(event, "userid");
+    int client = GetClientOfUserId(userid);
+    int newTeam = GetEventInt(event, "team");
+    int oldTeam = GetEventInt(event, "oldteam");
+
+    if (client >= 1 && client <= MaxClients && (newTeam != CS_TEAM_T && newTeam != CS_TEAM_CT)) {
+        Mix_ClearClientReadyState(client);
+    }
+
+    if (g_bHasMixStarted && g_bDidLiveStarted && !g_bIsKo3Running) {
+        Mix_Stats_HandleClutchTeamChange(client, userid, oldTeam, newTeam);
+    }
+
+    return Plugin_Continue;
+}
+
+/**
+ * 清理客户端准备状态
+ */
+void Mix_ClearClientReadyState(int client)
+{
+    if (client < 1 || client > MaxClients) {
+        return;
+    }
+
+    if (g_bReadyPlayers[client]) {
+        g_bReadyPlayers[client] = false;
+        if (g_iReadyCount > 0) {
+            g_iReadyCount--;
+        }
+    }
+}
+
+/**
+ * 玩家离开服务器或失去参与资格时统一清理状态
+ */
+void Mix_HandleClientLeaving(int client, int userid)
+{
+    if (g_bHasMixStarted && g_bDidLiveStarted && !g_bIsKo3Running) {
+        Mix_Stats_HandleClutchDisconnect(client, userid);
+    }
+
+    if (client < 1 || client > MaxClients) {
+        return;
+    }
+
+    Mix_ClearClientReadyState(client);
     g_bHidePanel[client] = false;
     g_bGaggedPlayers[client] = false;
     g_bMutedPlayers[client] = false;
-
-    return Plugin_Continue;
+    g_iLastKnownHealth[client] = 0;
 }
 
 /**
@@ -864,7 +921,7 @@ public Action Mix_HudTimer(Handle timer)
     // 检查玩家数量和准备状态
     int playerCount = 0;
     for (int i = 1; i <= MaxClients; i++) {
-        if (IsClientInGame(i) && !IsFakeClient(i)) {
+        if (Mix_IsReadyEligibleClient(i)) {
             playerCount++;
         }
     }
@@ -875,9 +932,13 @@ public Action Mix_HudTimer(Handle timer)
         // 启动T人流程
         g_bKickCountdownActive = true;      // 设置状态为“进行中”
 
-        if (g_hKickUnreadyTimer != null) {
+        if (g_hKickUnreadyTimer != INVALID_HANDLE) {
             KillTimer(g_hKickUnreadyTimer);
+            g_hKickUnreadyTimer = INVALID_HANDLE;
         }
+
+        g_iSecond = 30;
+        g_bIsKicked = false;
 
         // 创建新的专用计时器
         g_hKickUnreadyTimer = CreateTimer(1.0, Mix_ReadyCountdownTimer, _, TIMER_REPEAT);

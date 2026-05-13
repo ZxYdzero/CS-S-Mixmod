@@ -118,7 +118,11 @@ public Action Mix_ChangeMap(Handle timer, int client)
     } else {
         // 这里使用硬编码的消息，因为没有对应的翻译短语
         // 可以在翻译文件中添加"Invalid Map Name"短语
-        PrintToChat(client, "\x04[%s]:\x03 地图名称无效!", MODNAME);
+        if (Mix_IsInGameClient(client)) {
+            PrintToChat(client, "\x04[%s]:\x03 地图名称无效!", MODNAME);
+        } else {
+            PrintToServer("[%s]: 地图名称无效!", MODNAME);
+        }
     }
 
     return Plugin_Continue;

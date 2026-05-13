@@ -82,6 +82,15 @@ public Action Mix_Command_MVP(int client, int args)
 public Action Mix_Command_Ready(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1 && GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
+        if (!Mix_IsReadyEligibleClient(client)) {
+            if (client == 0) {
+                PrintToServer("[%s]: 准备命令只能由游戏内 T/CT 真人玩家使用", MODNAME);
+            } else if (client > 0 && client <= MaxClients && IsClientInGame(client)) {
+                PrintToChat(client, "\x04[%s]:\x03 只有 T/CT 队伍中的真人玩家可以准备", MODNAME);
+            }
+            return Plugin_Handled;
+        }
+
         if (!g_bAllowReady) {
             SetGlobalTransTarget(client);
             PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Ready System Disabled");
@@ -178,6 +187,15 @@ public Action Mix_Command_Ready(int client, int args)
 public Action Mix_Command_NotReady(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1 && GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
+        if (!Mix_IsReadyEligibleClient(client)) {
+            if (client == 0) {
+                PrintToServer("[%s]: 取消准备命令只能由游戏内 T/CT 真人玩家使用", MODNAME);
+            } else if (client > 0 && client <= MaxClients && IsClientInGame(client)) {
+                PrintToChat(client, "\x04[%s]:\x03 只有 T/CT 队伍中的真人玩家可以取消准备", MODNAME);
+            }
+            return Plugin_Handled;
+        }
+
         if (!g_bAllowReady) {
             SetGlobalTransTarget(client);
             PrintToChat(client, "\x04[%s]:\x03 %t", MODNAME, "Ready System Disabled");
@@ -190,7 +208,9 @@ public Action Mix_Command_NotReady(int client, int args)
         }
         if (g_bReadyPlayers[client]) {
             g_bReadyPlayers[client] = false;
-            g_iReadyCount--;
+            if (g_iReadyCount > 0) {
+                g_iReadyCount--;
+            }
             char name[MAX_NAME_LENGTH];
             GetClientName(client, name, sizeof(name));
             for (int i = 1; i <= MaxClients; i++) {
@@ -407,7 +427,7 @@ public Action Mix_Command_ForceReady(int client, int args)
     if (GetConVarInt(g_hCvarEnabled) == 1 && GetConVarInt(g_hCvarAutoMixEnabled) == 1) {
         int added = 0;
         for (int i = 1; i <= MaxClients; i++) {
-            if (IsClientInGame(i) && !IsFakeClient(i) && !g_bReadyPlayers[i]) {
+            if (Mix_IsReadyEligibleClient(i) && !g_bReadyPlayers[i]) {
                 // 让每个未准备玩家都走一遍Mix_Command_Ready流程
                 Mix_Command_Ready(i, 0);
                 added++;
@@ -424,7 +444,7 @@ public Action Mix_Command_ForceReady(int client, int args)
 public Action Mix_Command_Password(int client, int args)
 {
     if (GetConVarInt(g_hCvarEnabled) == 1) {
-        Mix_HandlePasswordCommand(client, "password");
+        Mix_HandlePasswordCommand(client);
     }
     return Plugin_Handled;
 }

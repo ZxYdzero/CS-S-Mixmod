@@ -7,6 +7,8 @@
 #endif
 #define _mixmod_ui_included
 
+char g_szPasswordMenuValue[MAXPLAYERS + 1][32];
+
 /**
  * 初始化UI系统
  */
@@ -153,7 +155,7 @@ public int Mix_HandleMixMenu(Handle menu, MenuAction action, int param1, int par
         } else if (StrEqual(option, "stoprecord")) {
             Mix_StopRecord(param1, 1);
         } else if (StrEqual(option, "pass")) {
-            Mix_HandlePasswordCommand(param1, "password");
+            Mix_HandlePasswordCommand(param1);
         } else if (StrEqual(option, "rpass")) {
             Mix_RemovePassword(param1);
         } else if (StrEqual(option, "rpw")) {
@@ -178,40 +180,55 @@ public int Mix_HandleMixMenu(Handle menu, MenuAction action, int param1, int par
 /**
  * 处理密码命令
  */
-void Mix_HandlePasswordCommand(int client, const char[] command)
+void Mix_HandlePasswordCommand(int client)
 {
     if (GetConVarInt(g_hCvarEnablePasswords) == 1) {
-        if (client == 0) {
+        if (!Mix_IsInGameClient(client)) {
             PrintToServer("[%s]: 此命令只能在游戏内使用", MODNAME);
             return;
         }
 
-        // 创建密码输入菜单
-        Handle menu = CreateMenu(Mix_HandlePasswordMenu);
-        SetMenuTitle(menu, "输入服务器密码:");
-
-        char buffer[32];
-        for (int i = 0; i < 10; i++) {
-            Format(buffer, sizeof(buffer), "%d", i);
-            AddMenuItem(menu, buffer, buffer);
-        }
-
-        // 添加特殊字符
-        AddMenuItem(menu, "a", "a");
-        AddMenuItem(menu, "b", "b");
-        AddMenuItem(menu, "c", "c");
-        AddMenuItem(menu, "d", "d");
-        AddMenuItem(menu, "e", "e");
-        AddMenuItem(menu, "f", "f");
-
-        PushMenuString(menu, "command", command);
-        PushMenuString(menu, "password", "");
-
-        DisplayMenu(menu, client, MENU_TIME_FOREVER);
+        g_szPasswordMenuValue[client][0] = '\0';
+        Mix_ShowPasswordMenu(client);
     } else {
-
-        PrintToChat(client, "\x04[%s]:\x03 密码命令已禁用", MODNAME);
+        if (Mix_IsInGameClient(client)) {
+            PrintToChat(client, "\x04[%s]:\x03 密码命令已禁用", MODNAME);
+        } else {
+            PrintToServer("[%s]: 密码命令已禁用", MODNAME);
+        }
     }
+}
+
+/**
+ * 显示密码输入菜单。
+ */
+void Mix_ShowPasswordMenu(int client)
+{
+    if (!Mix_IsInGameClient(client)) {
+        return;
+    }
+
+    Handle menu = CreateMenu(Mix_HandlePasswordMenu);
+    if (g_szPasswordMenuValue[client][0] == '\0') {
+        SetMenuTitle(menu, "输入服务器密码:");
+    } else {
+        SetMenuTitle(menu, "输入服务器密码 (%s):", g_szPasswordMenuValue[client]);
+    }
+
+    char buffer[32];
+    for (int i = 0; i < 10; i++) {
+        Format(buffer, sizeof(buffer), "%d", i);
+        AddMenuItem(menu, buffer, buffer);
+    }
+
+    AddMenuItem(menu, "a", "a");
+    AddMenuItem(menu, "b", "b");
+    AddMenuItem(menu, "c", "c");
+    AddMenuItem(menu, "d", "d");
+    AddMenuItem(menu, "e", "e");
+    AddMenuItem(menu, "f", "f");
+
+    DisplayMenu(menu, client, MENU_TIME_FOREVER);
 }
 
 /**
@@ -220,49 +237,36 @@ void Mix_HandlePasswordCommand(int client, const char[] command)
 public int Mix_HandlePasswordMenu(Handle menu, MenuAction action, int param1, int param2)
 {
     if (action == MenuAction_Select) {
+        if (!Mix_IsInGameClient(param1)) {
+            return 0;
+        }
+
         char item[32];
         GetMenuItem(menu, param2, item, sizeof(item));
 
-        char command[32];
-        GetMenuString(menu, "command", command, sizeof(command));
+        if (strlen(g_szPasswordMenuValue[param1]) + strlen(item) >= sizeof(g_szPasswordMenuValue[])) {
+            PrintToChat(param1, "\x04[%s]:\x03 密码长度已达上限", MODNAME);
+            return 0;
+        }
 
-        char password[32];
-        GetMenuString(menu, "password", password, sizeof(password));
-        Format(password, sizeof(password), "%s%s", password, item);
+        StrCat(g_szPasswordMenuValue[param1], sizeof(g_szPasswordMenuValue[]), item);
 
         char name[MAX_NAME_LENGTH];
         GetClientName(param1, name, sizeof(name));
 
-        if (strlen(password) >= 4) {
+        if (strlen(g_szPasswordMenuValue[param1]) >= 4) {
             // 密码长度足够，设置密码
-            SetConVarString(g_hPassword, password);
+            SetConVarString(g_hPassword, g_szPasswordMenuValue[param1]);
 
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03已设置服务器密码", MODNAME, name);
-            CloseHandle(menu);
+            g_szPasswordMenuValue[param1][0] = '\0';
         } else {
             // 继续输入密码
-            Handle newMenu = CreateMenu(Mix_HandlePasswordMenu);
-            SetMenuTitle(newMenu, "输入服务器密码 (%s):", password);
-
-            char buffer[32];
-            for (int i = 0; i < 10; i++) {
-                Format(buffer, sizeof(buffer), "%d", i);
-                AddMenuItem(newMenu, buffer, buffer);
-            }
-
-            // 添加特殊字符
-            AddMenuItem(newMenu, "a", "a");
-            AddMenuItem(newMenu, "b", "b");
-            AddMenuItem(newMenu, "c", "c");
-            AddMenuItem(newMenu, "d", "d");
-            AddMenuItem(newMenu, "e", "e");
-            AddMenuItem(newMenu, "f", "f");
-
-            PushMenuString(newMenu, "command", command);
-            PushMenuString(newMenu, "password", password);
-
-            DisplayMenu(newMenu, param1, MENU_TIME_FOREVER);
-            CloseHandle(menu);
+            Mix_ShowPasswordMenu(param1);
+        }
+    } else if (action == MenuAction_Cancel) {
+        if (param1 >= 1 && param1 <= MaxClients) {
+            g_szPasswordMenuValue[param1][0] = '\0';
         }
     } else if (action == MenuAction_End) {
         CloseHandle(menu);
@@ -392,7 +396,7 @@ void Mix_StartLive(int client)
         }
 
         char name[MAX_NAME_LENGTH];
-        GetClientName(client, name, sizeof(name));
+        Mix_GetCommandSourceName(client, name, sizeof(name));
         PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03开始了满十", MODNAME, name);
 
         char teamAName[32];
@@ -426,7 +430,7 @@ void Mix_RestartRound(int client)
     if (GetConVarInt(g_hCvarEnabled) == 1) {
         if (GetConVarInt(g_hCvarEnableRRCommand) == 1) {
             char name[MAX_NAME_LENGTH];
-            GetClientName(client, name, sizeof(name));
+            Mix_GetCommandSourceName(client, name, sizeof(name));
 
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03重启了回合", MODNAME, name);
             SetConVarInt(g_hRestartGame, 1);
@@ -462,7 +466,7 @@ void Mix_StartKnifeRound(int client)
             }
 
             char name[MAX_NAME_LENGTH];
-            GetClientName(client, name, sizeof(name));
+            Mix_GetCommandSourceName(client, name, sizeof(name));
 
             PrintToChatAll("\x04[%s]:\x03 管理员 \x04%s \x03开始了刀局", MODNAME, name);
         } else {
@@ -470,70 +474,4 @@ void Mix_StartKnifeRound(int client)
             PrintToChat(client, "\x04[%s]:\x03 刀局功能已禁用", MODNAME);
         }
     }
-}
-
-/**
- * 保存菜单字符串
- */
-void PushMenuString(Handle menu, const char[] id, const char[] data)
-{
-    Handle datapack;
-    int count = 0;
-
-    if (GetMenuProp(menu, "m_hMenuInfos", datapack)) {
-        count = view_as<int>(GetPackPosition(datapack));
-        ResetPack(datapack);
-    } else {
-        datapack = CreateDataPack();
-        SetMenuProp(menu, "m_hMenuInfos", datapack);
-    }
-
-    // 查找现有ID并覆盖其数据
-    bool found = false;
-    char buffer[128];
-    for (int i = 0; i < count; i += 2) {
-        ReadPackString(datapack, buffer, sizeof(buffer));
-        if (StrEqual(buffer, id)) {
-            found = true;
-            SetPackPosition(datapack, view_as<DataPackPos>(view_as<int>(GetPackPosition(datapack)) + 128));
-            WritePackString(datapack, data);
-            break;
-        } else {
-            SetPackPosition(datapack, view_as<DataPackPos>(view_as<int>(GetPackPosition(datapack)) + 128));
-        }
-    }
-
-    // 如果未找到，则添加新条目
-    if (!found) {
-        WritePackString(datapack, id);
-        WritePackString(datapack, data);
-    }
-}
-
-/**
- * 获取菜单字符串
- */
-void GetMenuString(Handle menu, const char[] id, char[] buffer, int maxlength)
-{
-    Handle datapack;
-
-    if (!GetMenuProp(menu, "m_hMenuInfos", datapack)) {
-        buffer[0] = '\0';
-        return;
-    }
-
-    ResetPack(datapack);
-    char tempId[128];
-
-    while (!IsPackReadable(datapack, 1)) {
-        ReadPackString(datapack, tempId, sizeof(tempId));
-        if (StrEqual(tempId, id)) {
-            ReadPackString(datapack, buffer, maxlength);
-            return;
-        }
-
-        SetPackPosition(datapack, view_as<DataPackPos>(view_as<int>(GetPackPosition(datapack)) + 128)); // 跳过数据字符串
-    }
-
-    buffer[0] = '\0';
 }

@@ -288,6 +288,18 @@ public Plugin myinfo =
     url = "https://github.com/ZxYdzero/CS-S-Mixmod"
 };
 
+/**
+ * 插件加载前注册 Native。
+ *
+ * 按 SourceMod API 要求，CreateNative/RegPluginLibrary 应在 AskPluginLoad2
+ * 阶段完成，保证依赖本插件 API 的其他插件能稳定发现 natives。
+ */
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+    Mix_RegisterAPI();
+    return APLRes_Success;
+}
+
 // =============================================================================
 // 插件入口点
 // =============================================================================
@@ -357,7 +369,7 @@ public void OnMapStart()
  */
 public void OnClientAuthorized(int client, const char[] auth)
 {
-    Mix_OnClientAuthorized(client, auth);
+    Mix_OnClientAuthorized(client);
 }
 
 /**

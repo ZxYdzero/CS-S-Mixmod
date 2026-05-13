@@ -149,10 +149,6 @@ void Mix_OnMapStart()
     g_bIsItManual = true;
     g_bIsRandomBeingUsed = false;
 
-    // 重置最后进入玩家信息
-    g_szLastEntered_SteamID = "NOT_VALID";
-    g_szLastEntered_Name = "NOT_VALID";
-
     // 重新查找金钱偏移量
     g_iAccount = FindSendPropInfo("CCSPlayer", "m_iAccount");
     if (g_iAccount == -1) {
@@ -187,6 +183,8 @@ void Mix_OnMapStart()
  */
 void Mix_OnMapEnd()
 {
+    Mix_StopKickUnreadyTimer();
+
     if (GetConVarInt(g_hCvarEnableAutoSourceTVRecord) == 1) {
         ServerCommand("tv_enable 1");
     }
@@ -224,6 +222,8 @@ void Mix_OnPluginEnd()
         KillTimer(g_hHudTimer);
         g_hHudTimer = INVALID_HANDLE;
     }
+
+    Mix_StopKickUnreadyTimer();
 
     if (g_hReadyStatus != INVALID_HANDLE) {
         CloseHandle(g_hReadyStatus);
@@ -296,20 +296,9 @@ void Mix_CheckPropsForCurrentMap()
 /**
  * 当客户端授权时调用
  */
-void Mix_OnClientAuthorized(int client, const char[] auth)
+void Mix_OnClientAuthorized(int client)
 {
     if (!IsFakeClient(client)) {
-        char name[35];
-        char auth2[35];
-        GetClientName(client, name, sizeof(name));
-
-        // 复制STEAM ID
-        Format(auth2, sizeof(auth2), "%s", auth);
-
-        // 记录最后进入的玩家信息
-        g_szLastEntered_SteamID = auth2;
-        g_szLastEntered_Name = name;
-
         if (g_bHasMixStarted) {
             // 通知玩家比赛正在进行
             CreateTimer(60.0, Mix_InformPlayerAboutTheMix, client);

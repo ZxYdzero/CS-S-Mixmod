@@ -22,20 +22,13 @@ Handle g_hForward_OnPlayerReady = INVALID_HANDLE;
 Handle g_hForward_OnPlayerNotReady = INVALID_HANDLE;
 
 /**
- * 初始化API
+ * 注册 API Native 和库。
+ *
+ * SourceMod 要求动态 Native 尽早注册；这里由 AskPluginLoad2 调用，
+ * 避免其他插件加载时看不到本插件提供的 natives。
  */
-void Mix_InitAPI()
+void Mix_RegisterAPI()
 {
-    // 创建全局Forward
-    g_hForward_OnMixStart = CreateGlobalForward("MixMod_OnMixStart", ET_Ignore);
-    g_hForward_OnMixEnd = CreateGlobalForward("MixMod_OnMixEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
-    g_hForward_OnHalfTime = CreateGlobalForward("MixMod_OnHalfTime", ET_Ignore, Param_Cell, Param_Cell);
-    g_hForward_OnRoundStart = CreateGlobalForward("MixMod_OnRoundStart", ET_Ignore, Param_Cell, Param_Cell);
-    g_hForward_OnRoundEnd = CreateGlobalForward("MixMod_OnRoundEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
-    g_hForward_OnPlayerReady = CreateGlobalForward("MixMod_OnPlayerReady", ET_Ignore, Param_Cell);
-    g_hForward_OnPlayerNotReady = CreateGlobalForward("MixMod_OnPlayerNotReady", ET_Ignore, Param_Cell);
-    
-    // 创建Native
     CreateNative("MixMod_GetAPIVersion", Native_GetAPIVersion);
     CreateNative("MixMod_IsMatchLive", Native_IsMatchLive);
     CreateNative("MixMod_GetCurrentRound", Native_GetCurrentRound);
@@ -49,6 +42,21 @@ void Mix_InitAPI()
     
     // 注册API库
     RegPluginLibrary("mixmod");
+}
+
+/**
+ * 初始化API Forward。
+ */
+void Mix_InitAPI()
+{
+    // 创建全局Forward
+    g_hForward_OnMixStart = CreateGlobalForward("MixMod_OnMixStart", ET_Ignore);
+    g_hForward_OnMixEnd = CreateGlobalForward("MixMod_OnMixEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
+    g_hForward_OnHalfTime = CreateGlobalForward("MixMod_OnHalfTime", ET_Ignore, Param_Cell, Param_Cell);
+    g_hForward_OnRoundStart = CreateGlobalForward("MixMod_OnRoundStart", ET_Ignore, Param_Cell, Param_Cell);
+    g_hForward_OnRoundEnd = CreateGlobalForward("MixMod_OnRoundEnd", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
+    g_hForward_OnPlayerReady = CreateGlobalForward("MixMod_OnPlayerReady", ET_Ignore, Param_Cell);
+    g_hForward_OnPlayerNotReady = CreateGlobalForward("MixMod_OnPlayerNotReady", ET_Ignore, Param_Cell);
 }
 
 /**
@@ -217,6 +225,8 @@ public int Native_GetPlayerStats(Handle plugin, int numParams)
     SetTrieValue(hStats, "headshots", g_PlayerStats[client].headshots);
     SetTrieValue(hStats, "damage", g_PlayerStats[client].damage);
     SetTrieValue(hStats, "clutches", g_PlayerStats[client].clutches);
+    SetTrieValue(hStats, "clutch_wins", g_PlayerStats[client].clutches);
+    SetTrieValue(hStats, "clutch_losses", g_PlayerStats[client].clutch_losses);
     SetTrieValue(hStats, "rounds_played", g_PlayerStats[client].rounds_played);
     SetTrieValue(hStats, "shots_fired", g_PlayerStats[client].shots_fired);
     SetTrieValue(hStats, "shots_hit", g_PlayerStats[client].shots_hit);

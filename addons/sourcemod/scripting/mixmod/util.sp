@@ -8,6 +8,27 @@
 #define _mixmod_util_included
 
 /**
+ * 检查是否为可直接发送菜单/聊天的游戏内客户端。
+ */
+bool Mix_IsInGameClient(int client)
+{
+    return (client >= 1 && client <= MaxClients && IsClientInGame(client));
+}
+
+/**
+ * 获取命令来源名称。client=0 或无效客户端会显示为服务器，避免自动流程
+ * 调用 GetClientName(0) 触发运行时错误。
+ */
+void Mix_GetCommandSourceName(int client, char[] buffer, int maxlength)
+{
+    if (Mix_IsInGameClient(client)) {
+        GetClientName(client, buffer, maxlength);
+    } else {
+        strcopy(buffer, maxlength, "服务器");
+    }
+}
+
+/**
  * 向队伍中的所有玩家显示菜单
  * 
  * @param menu     要显示的菜单句柄
@@ -58,22 +79,4 @@ void Mix_VoteMenuToAll(Handle menu, int time, int flags = 0)
     if (total > 0) {
         VoteMenu(menu, players, total, time, flags);
     }
-}
-
-/**
- * 获取菜单属性
- */
-bool GetMenuProp(Handle menu, const char[] prop, any &value)
-{
-    Handle hProp;
-    
-    return (GetTrieValue(view_as<StringMap>(menu), prop, hProp) && (value = hProp) != INVALID_HANDLE);
-}
-
-/**
- * 设置菜单属性
- */
-void SetMenuProp(Handle menu, const char[] prop, any value)
-{
-    SetTrieValue(view_as<StringMap>(menu), prop, value);
 }

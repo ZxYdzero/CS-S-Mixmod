@@ -10,6 +10,41 @@
 // 新增：准备面板显示控制变量
 bool g_bReadyPanelVisible = true;
 
+/**
+ * 检查客户端是否可参与满十准备。
+ *
+ * 只允许真实玩家且必须在 T/CT 队，避免控制台、观察者、SourceTV/Replay
+ * 或无效客户端污染 ready 计数。
+ */
+bool Mix_IsReadyEligibleClient(int client)
+{
+    if (client < 1 || client > MaxClients) {
+        return false;
+    }
+
+    if (!IsClientInGame(client) || IsFakeClient(client) || IsClientSourceTV(client) || IsClientReplay(client)) {
+        return false;
+    }
+
+    int team = GetClientTeam(client);
+    return (team == CS_TEAM_T || team == CS_TEAM_CT);
+}
+
+/**
+ * 停止自动踢未准备玩家倒计时。
+ */
+void Mix_StopKickUnreadyTimer()
+{
+    if (g_hKickUnreadyTimer != INVALID_HANDLE) {
+        KillTimer(g_hKickUnreadyTimer);
+        g_hKickUnreadyTimer = INVALID_HANDLE;
+    }
+
+    g_bKickCountdownActive = false;
+    g_bIsKicked = false;
+    g_iSecond = 30;
+}
+
 Action Mix_CreateReadyPanel()
 {
     if (!g_bReadyPanelVisible) {
@@ -160,7 +195,7 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
     // 检查玩家数量是否仍然满足条件
     int playerCount = 0;
     for (int i = 1; i <= MaxClients; i++) {
-        if (IsClientInGame(i) && !IsFakeClient(i)) {
+        if (Mix_IsReadyEligibleClient(i)) {
             playerCount++;
         }
     }
@@ -170,6 +205,8 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
         PrintToChatAll("\x04[%s]:\x03 条件已改变，取消踢出未准备玩家", MODNAME);
         g_hKickUnreadyTimer = INVALID_HANDLE;
         g_bKickCountdownActive = false;
+        g_bIsKicked = false;
+        g_iSecond = 30;
         return Plugin_Stop;
     }
     
@@ -179,7 +216,7 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
             
             int kickCount = 0;
             for (int i = 1; i <= MaxClients; i++) {
-                if (IsClientInGame(i) && !IsFakeClient(i)) {
+                if (Mix_IsReadyEligibleClient(i)) {
                     if (!g_bReadyPlayers[i]) {
                         KickClient(i, "[%s]: 你没有准备就绪，已被踢出服务器!", MODNAME);
                         kickCount++;
@@ -192,6 +229,8 @@ public Action Mix_ReadyCountdownTimer(Handle timer, any data)
         }
         g_bKickCountdownActive = false;
         g_hKickUnreadyTimer = INVALID_HANDLE;
+        g_bIsKicked = false;
+        g_iSecond = 30;
         return Plugin_Stop;
     } else {
         PrintCenterTextAll("未准备玩家将在 %d 秒后被踢出", g_iSecond);

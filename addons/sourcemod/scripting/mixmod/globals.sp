@@ -159,13 +159,6 @@ bool g_bMutedPlayers[MAXPLAYERS+1] = {false, ...};
 bool g_bGaggedPlayers[MAXPLAYERS+1] = {false, ...};
 
 // =============================================================================
-// 最后进入的玩家
-// =============================================================================
-#pragma unused g_szLastEntered_SteamID, g_szLastEntered_Name
-char g_szLastEntered_SteamID[35];  // 最后进入玩家的Steam ID
-char g_szLastEntered_Name[35];     // 最后进入玩家的名称
-
-// =============================================================================
 // 地图属性标记
 // =============================================================================
 bool g_bIsMapValidToRemoveProps = true;
@@ -193,10 +186,14 @@ Handle g_hKickUnreadyTimer = INVALID_HANDLE;
 bool g_bHidePanel[MAXPLAYERS+1] = {false, ...};
 
 // =============================================================================
-// 残局相关
+// 统计口径相关
 // =============================================================================
-bool g_bInClutchSituation[MAXPLAYERS+1] = {false, ...};
-int g_iClutchEnemyCount[MAXPLAYERS+1] = {0, ...};
+int g_iLastKnownHealth[MAXPLAYERS+1] = {0, ...}; // 用于按实际剩余 HP 结算有效伤害/ADR
+bool g_bClutchActive = false;                    // 当前回合是否已有残局待结算
+int g_iClutchPlayer = 0;                         // 当前残局玩家
+int g_iClutchUserId = 0;                         // 当前残局玩家userid，用于防止断线后slot复用
+int g_iClutchTeam = 0;                           // 当前残局玩家队伍
+int g_iClutchEnemyCount = 0;                     // 进入残局时面对的敌人数
 
 /**
  * 重置比赛参数和玩家状态
@@ -244,8 +241,14 @@ void Mix_ResetMatchState()
     g_bIsRecording = false;
     g_bIsRecordManual = false;
     g_bSaveClientsScore = false;
+    g_bClutchActive = false;
+    g_iClutchPlayer = 0;
+    g_iClutchUserId = 0;
+    g_iClutchTeam = 0;
+    g_iClutchEnemyCount = 0;
 
     // 重置地图和计时器状态
+    Mix_StopKickUnreadyTimer();
     g_szMatchMap[0] = '\0';
     g_iSecond = 30;
     g_bKickCountdownActive = false;
@@ -262,8 +265,7 @@ void Mix_ResetMatchState()
         g_bMutedPlayers[i] = false;
         g_bGaggedPlayers[i] = false;
         g_bHidePanel[i] = false;
-        g_bInClutchSituation[i] = false;
-        g_iClutchEnemyCount[i] = 0;
+        g_iLastKnownHealth[i] = 0;
     }
 }
 
@@ -279,7 +281,5 @@ void Mix_InitGlobals()
     Mix_ResetMatchState();
 
     // 初始化其他未在重置函数中处理的变量
-    g_szLastEntered_SteamID = "NOT_VALID";
-    g_szLastEntered_Name = "NOT_VALID";
     g_bIsMapValidToRemoveProps = true;
 }
