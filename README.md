@@ -1,7 +1,7 @@
 
 # CS:Source Mix 插件
 
-这是一个为 Counter-Strike: Source 设计的比赛管理插件，提供了完整的比赛流程管理、队伍管理、统计系统和多语言支持。
+这是一个为 Counter-Strike: Source 设计的比赛管理插件，提供完整的比赛流程管理、队伍管理、统计系统、多语言支持和对外 API。当前源码已按 SourceMod 1.12 稳定版 API 进行整理，并通过 SourceMod 1.13 开发版编译检查。
 
 ## 安装步骤
 
@@ -33,11 +33,14 @@
 - **地图列表来源**：可以从 maps 目录或 mapcycle.txt 生成地图列表
 
 ### 统计系统
-- **个人统计**：记录击杀、死亡、助攻、爆头、伤害等数据
+- **个人统计**：记录击杀、死亡、助攻、爆头、有效伤害、开火/命中、下包和拆包等数据
 - **比赛统计**：在比赛结束时显示所有玩家的统计数据
-- **实时查询**：玩家可以随时查看自己或他人的统计数据
-- **残局识别**：自动识别并记录残局获胜情况
-- **统计指标**：包括 K/D 比率、爆头率、平均每回合伤害(ADR)、命中率等
+- **实时查询**：玩家可以使用 `!stats [玩家名]` 查看自己或他人的统计数据
+- **真实 ADR 口径**：ADR 使用受害者实际扣除的 HP 计算，避免 `player_hurt.dmg_health` 的过量伤害虚高
+- **队伤过滤**：队友伤害不会进入 ADR、助攻和有效伤害统计
+- **残局识别**：自动识别 1v2 及以上残局，并记录残局胜利/失败
+- **突发情况处理**：残局链路覆盖死亡、断线、换队/观战、对手全部离开、slot 复用保护和刀局排除
+- **统计指标**：包括 K/D 比率、爆头率、平均每回合伤害(ADR)、命中率、残局胜负等
 
 ### 多语言支持
 - **内置翻译**：支持中文、英文和俄文
@@ -47,7 +50,69 @@
 - **密码管理**：支持设置、移除和随机生成服务器密码
 - **语音管理**：支持静音和禁言玩家
 - **道具移除**：可以移除地图上的鸡、可打碎物体等干扰物
-- **API接口**：提供 API 接口供其他插件访问比赛状态和统计数据
+- **API接口**：提供 API 接口供其他插件访问比赛状态和统计数据；Native 注册已移动到 `AskPluginLoad2`，便于依赖插件稳定发现接口
+
+
+## 统计口径与边界说明
+
+### ADR / 伤害
+- `damage` 和 ADR 均按**有效 HP 伤害**计算。
+- 致死伤害只统计受害者实际剩余 HP，例如对 5 HP 玩家造成 80 点 raw damage，只计 5 点有效伤害。
+- 队友伤害、自伤、无效 attacker/victim 不进入伤害、ADR、命中和助攻。
+- `bomb_exploded` 不会被计为下包；只有 `bomb_planted` 会增加下包次数。
+
+### 残局
+- 只记录 1v2、1v3、1v4、1v5 等 1vX 残局，1v1 不计入残局。
+- 刀局阶段不会记录残局。
+- 回合结束时按获胜队伍结算残局胜/负。
+- 残局玩家断线、换队或进入观察者，按残局失败记录。
+- 对手断线或换队导致敌方无人存活时，按残局胜利记录。
+- 非死亡事件导致进入 1vX（例如断线、换队）时会重新检测残局状态。
+
+### 准备系统
+- 只有真实玩家且处于 T/CT 队伍时可以准备。
+- SourceTV、Replay、观察者、控制台和无效客户端不会计入满十准备。
+- 玩家断线或离开 T/CT 时会清理 ready 状态，避免准备人数虚高。
+
+## 编译与验证
+
+推荐使用 SourceMod 官方编译器：
+
+```bash
+/tmp/sourcemod-1.12.0-git7230/addons/sourcemod/scripting/spcomp64 \
+  -i/tmp/sourcemod-1.12.0-git7230/addons/sourcemod/scripting/include \
+  -oaddons/sourcemod/plugins/mixmod.smx \
+  addons/sourcemod/scripting/mixmod.sp
+```
+
+当前已验证：
+
+- SourceMod `1.12.0.7230`：`0 errors, 0 warnings`
+- SourceMod `1.13.0.7346`：`0 errors, 0 warnings`
+
+> 仓库中部分历史 `.sp` 文件使用 CRLF 换行。执行 whitespace 检查时建议允许 `cr-at-eol`：
+>
+> ```bash
+> git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
+> ```
+
+## API 统计字段
+
+`MixMod_GetPlayerStats` 返回的统计字段包含：
+
+- `kills`
+- `deaths`
+- `assists`
+- `headshots`
+- `damage`：有效 HP 伤害
+- `rounds_played`
+- `shots_fired`
+- `shots_hit`
+- `bomb_plants`
+- `bomb_defuses`
+- `clutches`：兼容旧字段，表示残局胜利次数
+- `clutch_wins`：残局胜利次数
+- `clutch_losses`：残局失败次数
 
 ## 命令列表
 
@@ -95,6 +160,7 @@
 
 - 换图后请务必执行 `changelevel_next`，否则可能导致服务器崩溃。
 - 插件默认支持常用比赛流程，支持自定义队名、密码、地图列表等。
+- 建议在正式服更新前，先在测试服进行一局包含下包、拆包、断线、换队和残局的 smoke test。
 
 ## 许可证
 
